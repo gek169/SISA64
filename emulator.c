@@ -52,6 +52,7 @@ void sisa64_emulate(){
 	uint64_t saved_pc;
 	uint64_t saved_stp;
 	uint64_t regfile_loc; /*saved*/
+	uint8_t maxsaved_regs;	
 	memset(gpregs, 0, sizeof(gpregs));
 
 	//256 possible values in a byte, 256 opcodes (illegal or otherwise), 256 entries in the opcode table.
@@ -215,9 +216,9 @@ void sisa64_emulate(){
 		membase = sisa64_mem;
 		mem_max = SYS_MEMORY_MASK;
 		/*store the registerfile*/
-		for(int i = 0; i < 256; i++) WRITE64(regfile_loc+i*8,gpregs[i]);
-		WRITE64(regfile_loc+256*8,pc);
-		WRITE64(regfile_loc+257*8,stp);
+		for(int i = 0; i <= maxsaved_regs; i++) WRITE64(regfile_loc+i*8,gpregs[i]);
+		WRITE64(regfile_loc+((uint32_t)maxsaved_regs+1)*8,pc);
+		WRITE64(regfile_loc+((uint32_t)maxsaved_regs+2)*8,stp);
 		/*Prepare for continued privileged execution*/
 		gpregs[0] = Rcode;
 		Rcode = 0;
@@ -239,18 +240,17 @@ void sisa64_emulate(){
 	{
 		uint64_t new_offset;
 		uint64_t new_max;
-		
 		new_offset = gpregs[EAT_BYTE()];
 		new_max = gpregs[EAT_BYTE()];
 		regfile_loc = gpregs[EAT_BYTE()];
 		instruction_counter = PREEMPT_MAX - gpregs[EAT_BYTE()];
+		maxsaved_regs = EAT_BYTE();
 
-
-		for(int i = 0; i < 256; i++) gpregs[i] = READ64(regfile_loc+i*8);
+		for(int i = 0; i <= maxsaved_regs; i++) gpregs[i] = READ64(regfile_loc+i*8);
 		saved_pc = pc;
 		saved_stp = stp;
-		pc = READ64(regfile_loc+256*8);
-		stp = READ64(regfile_loc+257*8);
+		pc = READ64(regfile_loc+((uint32_t)maxsaved_regs + 1)*8);
+		stp = READ64(regfile_loc+((uint32_t)maxsaved_regs + 2)*8);
 
 		membase = sisa64_mem + new_offset;
 		mem_max = new_max;

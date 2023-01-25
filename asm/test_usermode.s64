@@ -18,7 +18,7 @@
 
 
 	//become user with those arguments!
-	become_user 0,1,2,3
+	become_user 0,1,2,3,255
 
 	//we have now returned, and should read the memory
 	ld8 0, q%userland_place%
@@ -35,8 +35,8 @@
 
 	section 0x100000
 
-	:process_regfile_loc:
-	fill 258,0;
+:process_regfile_loc:
+	fill 2064,0;
 
 
 //sixteen megabytes out. Our user program!

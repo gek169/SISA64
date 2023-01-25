@@ -112,7 +112,7 @@ static const unsigned insn_nargs[89] = {
 	0,
 	0,
 	//become user
-	4,
+	5,
 	//dread
 	1,
 	//dwrite
