@@ -1233,11 +1233,12 @@ void sisa64_emulate(){
 		regid_dest = EAT_BYTE();
 		regid_src = EAT_BYTE();
 		test = (gpregs[regid_testme] != 0) ;
-		gpregs[regid_dest] = test * 
-            gpregs[regid_src]
+		gpregs[regid_dest] = 
+			test * 
+            	gpregs[regid_src]
             +
             (!test) * 
-            gpregs[regid_dest]
+            	gpregs[regid_dest]
         
         ;
 	}
