@@ -56,7 +56,7 @@ void sisa64_emulate(){
 	memset(gpregs, 0, sizeof(gpregs));
 
 	//256 possible values in a byte, 256 opcodes (illegal or otherwise), 256 entries in the opcode table.
-	const void* opcodes[256] = {
+	static const void* const opcodes[256] = {
 
 		/*PRIVELEGE AND TECHNICAL*/
 
