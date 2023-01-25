@@ -1,13 +1,13 @@
-
+CC=gcc
 
 
 all: clean s64as s64e
 
 s64as:
-	gcc -O3 -march=native s64as.c -o s64as
+	$(CC) -O3 -march=native s64as.c -o s64as
 
 s64e:
-	gcc -O3 -march=native device.c emulator.c emu_frontend.c -o s64e
+	$(CC) -O3 -march=native device.c emulator.c emu_frontend.c -o s64e
 
 install: all
 	cp s64as /usr/local/bin/
