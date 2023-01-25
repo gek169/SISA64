@@ -1215,6 +1215,7 @@ void sisa64_emulate(){
 
 	J_MNZ:; //move if not zero
 	{
+/*
 		uint8_t regid_dest;
 		uint8_t regid_src;
 		uint8_t regid_testme;
@@ -1223,6 +1224,22 @@ void sisa64_emulate(){
 		regid_src = EAT_BYTE();
 		if(gpregs[regid_testme] != 0)
 			gpregs[regid_dest] = gpregs[regid_src];
+*/
+		uint8_t regid_dest;
+		uint8_t regid_src;
+		uint8_t regid_testme;
+        uint64_t test;
+		regid_testme = EAT_BYTE();
+		regid_dest = EAT_BYTE();
+		regid_src = EAT_BYTE();
+		test = (gpregs[regid_testme] != 0) ;
+		gpregs[regid_dest] = test * 
+            gpregs[regid_src]
+            +
+            (!test) * 
+            gpregs[regid_dest]
+        
+        ;
 	}
 	DISPATCH();
 
