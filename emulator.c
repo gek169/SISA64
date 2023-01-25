@@ -35,7 +35,7 @@ enum{
 };
 
 
-#define PREEMPT_MAX 0x1000000
+#define PREEMPT_MAX 0xF0000000
 
 uint8_t* sisa64_mem = NULL;
 
