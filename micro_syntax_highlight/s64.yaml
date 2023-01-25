@@ -1,0 +1,44 @@
+filetype: sisa16
+
+detect:
+    filename: "\\.(asm|hasm|s64|s64sym|h64)$"
+
+rules:
+    # This file is made for SISA64 assembly
+
+    ## Instructions
+    # s64
+    - statement: "\\b(?i)(hlt|nop|become_user|dread|dwrite|syscall|im64|im32|im16|im8|ld64|ld32|ld16|ld8|st64|st32|st16|st8|ild64|ild32|ild16|ild8|ist64|ist32|ist16|ist8|mov|lsh|rsh|and|or|xor|compl|neg|iadd|isub|imul|udiv|umod|idiv|imod|se32|se16|se8|ucmp|icmp|jmp|jnz|ret|call|getstp|setstp|push64|push32|push16|push8|pop64|pop32|pop16|pop8|itod|itof|dtoi|ftoi|dadd|dsub|dmul|ddiv|fadd|fsub|fmul|fdiv|dcmp|fcmp|inc|dec|ldsp64|ldsp32|ldsp16|ldsp8|stsp64|stsp32|stsp16|stsp8|bswap64|bswap32|bswap16)(?-i)\\b"
+
+      ## Constants
+      # Number - it works
+    - constant.number: "\\b(|h|A|0x)+[0-9]+(|h|A)+\\b"
+    - constant.number: "\\b0x[0-9 a-f A-F]+\\b"
+
+      ## split
+    - preproc: "%+[a-z A-Z 0-9 . _]+%"
+    - preproc: "%-+[a-z A-Z 0-9 . _]+%"
+      ## Other
+    - statement: "\\b(?i)(section)(?-i)\\b"
+    - statement: "\\b(?i)(bytes|longs|shorts|qwords)(?-i)\\b"
+    - identifier: "[a-z A-Z 0-9 _]+:"
+
+
+    - constant.string:
+        start: "'"
+        end: "'"
+        skip: "\\\\."
+        rules:
+            - constant.specialChar: "\\\\."
+
+    - comment:
+        start: "//"
+        end: "$"
+        rules:
+            - todo: "(TODO|XXX|FIXME):?"
+
+    - comment:
+        start: "#"
+        end: "$"
+        rules:
+            - todo: "(TODO|XXX|FIXME):?"

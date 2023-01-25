@@ -1,0 +1,18 @@
+
+
+nop
+looptop:
+
+	im8 0,'Q'
+	st32 0, q%myVariable%
+	im8 0,'F'
+	ld32 0, q%myVariable%
+	im8 1,0
+	dwrite 1,0
+	jmp q% looptop%
+
+
+
+
+myVariable:
+	longs 0

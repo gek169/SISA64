@@ -1,0 +1,48 @@
+Ideas for the SISA64 architecture:
+
+1) Multithreading
+
+	Implement multithreading by allowing dwrite() to access mutexes and make separate executions of emulate_sisa64() on some fixed number of alternate threads.
+
+2) Tube instructions- linear execution of micro-ops. Tried and it didn't speed things up.
+
+3) SIMD ops
+	Allow for simd operations within the gpregs. They take aligned gpreg ids, I.E., a V4 is aligned to 4, so the gpreg id's bottom 2 bits are empty.
+	V2 is aligned to 2, so the gpreg id's bttom bit is empty.
+
+	iv2add
+	iv2sub
+	iv2mul
+
+	iv4add
+	iv4sub
+	iv4mul
+
+	fv2add
+	fv2sub
+	fv2mul
+
+	dv2add
+	dv2sub
+	dv2mul
+	
+	fv4add
+	fv4sub
+	fv4mul
+
+	dv4add
+	dv4sub
+	dv4mul
+		
+4) Stack-relative loads and stores - IMPLEMENTED
+	Allow for reads and writes relative to the stack pointer, using fixed offsets.
+
+	ldspXX regid, offset
+	stspXX regid, offset
+
+5) bswap instructions - IMPLEMENTED
+
+	bswap64 rid
+	bswap32 rid
+	bswap16 rid
+

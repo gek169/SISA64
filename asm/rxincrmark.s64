@@ -1,0 +1,24 @@
+
+nop
+looptop:
+
+	//call q% do_nothing%
+	
+	ld32 0, q%myVariable%
+	mov 5,0
+	inc 0
+	st32 0, q%myVariable%
+
+	jnz 5, q%looptop%
+
+
+
+
+myVariable:
+	longs 1
+	shorts 0xAABB
+..asciz:Hello World!
+
+do_nothing:ret;
+
+

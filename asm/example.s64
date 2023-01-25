@@ -1,0 +1,35 @@
+
+
+
+
+nop
+im64 1, q%1%
+im64 15,&%myVariable%
+looptop:
+
+//demoing single logical line mode
+$|
+	ild16 0,15;
+	iadd 0,1;
+	ist16 15,0;
+	//write out a number
+	im8 25,'F';
+	im8 26,0;
+	dwrite 26,25;
+	im8 25,'\n';
+	dwrite 26,25;
+	//grab our number for testing.	
+	ild16	 0,15;
+	
+	jnz 0,q%looptop%;
+$|
+
+
+
+
+myVariable:
+	longs 0
+
+..asciz:Hello World!
+
+

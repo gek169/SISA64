@@ -1,0 +1,114 @@
+
+
+//the user is only allowed 64k of memory. so the mask is set to 0xFFff
+.user_max:0xFFff
+	section 0
+..priv:nop;
+
+	im64 0,q%userland_place%
+	im64 1,q%user_max%
+	im64 2,q%process_regfile_loc%
+
+	//we want to preempt it after 50 instructions.
+	im16 3,s%500%
+
+	//store nonsense at 0 so that if the user jumps there, they will have a nasty surprise.
+	im8 50,0
+	st8 50,q%0%
+
+
+	//become user with those arguments!
+	become_user 0,1,2,3
+
+	//we have now returned, and should read the memory
+	ld8 0, q%userland_place%
+	im8 50,0
+	dwrite 50, 0
+
+
+	//halt
+	hlt;
+
+
+
+	//1 megabyte out: our usermode register file!!
+
+	section 0x100000
+
+	:process_regfile_loc:
+	fill 258,0;
+
+
+//sixteen megabytes out. Our user program!
+section 0x1000000
+
+userland_place:
+
+
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//USERLAND CODE
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+..usr:
+	:user_write_target:
+	im16 0,s%2000%
+	//set our stack pointer
+	setstp 0
+	nop;
+	nop;
+	nop;
+	nop;
+	nop;
+	nop;
+	nop;
+	nop;
+	nop;
+	nop;
+	nop;
+	nop;
+	nop;
+	nop;
+	im16 0,'F','B'
+	bswap16 0
+	//st16 0,q%0%
+
+
+	st8 0, q%0x10000%
+
+
+	st16 0,q%0xffFF%
+	//test  increment.
+
+
+	call q%user_do_nothing_func%;
+	//st16 0,q%user_write_target%
+	//st8 0, q%0%
+	asm_print user_do_nothing_func
+	hlt
+	hlt;
+user_do_nothing_func:;
+
+	$|
+		ld8 15, &%user_write_target%;|
+		inc 15;
+		inc 15;
+		inc 15;
+		inc 15;
+		dec 15;
+		st8 15, &%user_write_target%;
+	$|
+	ret;
+
+	hlt
+
+
+
+
+
+

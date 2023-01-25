@@ -1,0 +1,11 @@
+Instead of having a fixed number of processes which each have their own memory map,
+
+I'm going to try to write a fast MMU implementation.
+
+it'll be a sixty four bit architecture with two privilege modes- privileged and unprivileged.
+
+the privileged mode is allowed to run device reads and writes, configure system flags, and whatnot.
+
+Here's how it works:
+
+There are two built-in buffers in the CPU, internal tables, for its execution mode.
