@@ -6,6 +6,8 @@ Ideas for the SISA64 architecture:
 
 2) Tube instructions- linear execution of micro-ops. Tried and it didn't speed things up.
 
+	(CANCELLEED)
+
 3) SIMD ops
 	Allow for simd operations within the gpregs. They take aligned gpreg ids, I.E., a V4 is aligned to 4, so the gpreg id's bottom 2 bits are empty.
 	V2 is aligned to 2, so the gpreg id's bttom bit is empty.
@@ -46,3 +48,8 @@ Ideas for the SISA64 architecture:
 	bswap32 rid
 	bswap16 rid
 
+6) mnz instruction- move if not zero.
+
+	mnz rid_test, rid_dest, rid_src
+
+7) 

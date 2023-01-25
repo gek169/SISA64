@@ -164,7 +164,8 @@ void sisa64_emulate(){
 		&&J_BSWAP32,
 		&&J_BSWAP16,
 
-		&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,
+		&&J_MNZ,
+		&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,
 		&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,
 		&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,
 
@@ -1211,6 +1212,20 @@ void sisa64_emulate(){
 		gpregs[regid] = u16_bswap(gpregs[regid]);
 	}
 	DISPATCH();
+
+	J_MNZ:; //move if not zero
+	{
+		uint8_t regid_dest;
+		uint8_t regid_src;
+		uint8_t regid_testme;
+		regid_testme = EAT_BYTE();
+		regid_dest = EAT_BYTE();
+		regid_src = EAT_BYTE();
+		if(gpregs[regid_testme] != 0)
+			gpregs[regid_dest] = gpregs[regid_src];
+	}
+	DISPATCH();
+
 	
 	J_NOP:DISPATCH();
 

@@ -1,6 +1,6 @@
 
 
-static const char* insn_names[89] = {
+static const char* insn_names[90] = {
 	"hlt",
 	"nop",
 	"become_user",
@@ -103,16 +103,17 @@ static const char* insn_names[89] = {
 	//big-endian or little-endian swap.
 	"bswap64",
 	"bswap32",
-	"bswap16"
+	"bswap16",
+	"mnz"
 };
 
 
 //how many bytes of arguments does the instruction take?
-static const unsigned insn_nargs[89] = {
+static const unsigned insn_nargs[90] = {
 	//halt and nop,
 	0,
 	0,
-	//become user
+	//become user takes 4 regids and 1 uint8 immediate.
 	5,
 	//dread
 	1,
@@ -181,12 +182,14 @@ static const unsigned insn_nargs[89] = {
 	5,5,5,5,
 	5,5,5,5,
 	//bswap
-	1,1,1
+	1,1,1,
+	//mnz takes 3 regids.
+	3
 	//dummy
 	//,0
 };
 
-static const char* insn_repl[89] = {
+static const char* insn_repl[90] = {
 	"bytes0;",
 	"bytes1;",
 	//become user has arguments
@@ -308,6 +311,7 @@ static const char* insn_repl[89] = {
 	//bswap64,32,16
 	"bytes86,",
 	"bytes87,",
-	"bytes88,"
+	"bytes88,",
+	"bytes89,"
 };
-static const unsigned n_insns = 89;
+static const unsigned n_insns = 90;
