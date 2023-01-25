@@ -97,10 +97,6 @@ user_do_nothing_func:;
 	$|
 		ld8 15, &%user_write_target%;|
 		inc 15;
-		inc 15;
-		inc 15;
-		inc 15;
-		dec 15;
 		st8 15, &%user_write_target%;
 	$|
 	ret;
