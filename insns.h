@@ -100,6 +100,7 @@ static const char* insn_names[89] = {
 	"stsp32",
 	"stsp16",
 	"stsp8",
+	//big-endian or little-endian swap.
 	"bswap64",
 	"bswap32",
 	"bswap16"
