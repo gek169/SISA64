@@ -104,6 +104,7 @@ static const char* insn_names[90] = {
 	"bswap64",
 	"bswap32",
 	"bswap16",
+	//conditional move
 	"mnz"
 };
 
