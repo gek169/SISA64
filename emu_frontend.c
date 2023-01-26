@@ -60,6 +60,7 @@ int main(int argc, char **argv) {
 
     di();
     sisa64_emulate();
+    /*TODO: if the system still has cores running, do not call dcl()*/
 	dcl();
     
     fclose(fhandle);
