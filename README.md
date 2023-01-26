@@ -2,11 +2,18 @@
 
 ![sisa64-logo](docs/logo.png)
 
-A big-endian architecture that I have been working on.
+## Welcome to the world of simple computing.
 
-All credit and glory for anything good that comes out of this project goes to Jesus of Nazareth, The Christ.
+This is the home of a work-in-progress 64 bit computer architecture that I am working on.
+
+In this repository there is an emulator, macro-assembler, and documentation.
+
+
+
+## Ultimate Credit.
 
 This project is an answer to prayer.
 
-See Manual.odt.
+I cannot take credit for the successes of the project.
 
+All glory to Jesus of Nazareth, the Christ, for ever. Amen.
