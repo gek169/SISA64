@@ -1131,7 +1131,7 @@ void sisa64_emulate(){
 
 	J_LDSP64:{
 		uint8_t regid;
-		uint32_t off;
+		uint64_t off;
 		regid = EAT_BYTE();
 		off = EAT_LONG();
 		gpregs[regid] = READ64(stp - off);
@@ -1139,7 +1139,7 @@ void sisa64_emulate(){
 	DISPATCH();
 	J_LDSP32:{
 		uint8_t regid;
-		uint32_t off;
+		uint64_t off;
 		regid = EAT_BYTE();
 		off = EAT_LONG();
 		gpregs[regid] = READ32(stp - off);
@@ -1147,7 +1147,7 @@ void sisa64_emulate(){
 	DISPATCH();
 	J_LDSP16:{
 		uint8_t regid;
-		uint32_t off;
+		uint64_t off;
 		regid = EAT_BYTE();
 		off = EAT_LONG();
 		gpregs[regid] = READ16(stp - off);
@@ -1155,7 +1155,7 @@ void sisa64_emulate(){
 	DISPATCH();
 	J_LDSP8:{
 		uint8_t regid;
-		uint32_t off;
+		uint64_t off;
 		regid = EAT_BYTE();
 		off = EAT_LONG();
 		gpregs[regid] = READ8(stp - off);
@@ -1164,7 +1164,7 @@ void sisa64_emulate(){
 
 	J_STSP64:{
 		uint8_t regid;
-		uint32_t off;
+		uint64_t off;
 		regid = EAT_BYTE();
 		off = EAT_LONG();
 		WRITE64(stp - off, gpregs[regid]);
@@ -1172,7 +1172,7 @@ void sisa64_emulate(){
 	DISPATCH();
 	J_STSP32:{
 		uint8_t regid;
-		uint32_t off;
+		uint64_t off;
 		regid = EAT_BYTE();
 		off = EAT_LONG();
 		WRITE32(stp - off, gpregs[regid]);
@@ -1180,7 +1180,7 @@ void sisa64_emulate(){
 	DISPATCH();
 	J_STSP16:{
 		uint8_t regid;
-		uint32_t off;
+		uint64_t off;
 		regid = EAT_BYTE();
 		off = EAT_LONG();
 		WRITE16(stp - off, gpregs[regid]);
@@ -1188,7 +1188,7 @@ void sisa64_emulate(){
 	DISPATCH();
 	J_STSP8:{
 		uint8_t regid;
-		uint32_t off;
+		uint64_t off;
 		regid = EAT_BYTE();
 		off = EAT_LONG();
 		WRITE8(stp - off, gpregs[regid]);
