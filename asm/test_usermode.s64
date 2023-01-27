@@ -93,6 +93,9 @@ userland_place:
 
 
 	call q%user_do_nothing_func%;
+
+	user_inf_loop:
+	jmp q%user_inf_loop%
 	//st16 0,q%user_write_target%
 	//st8 0, q%0%
 	asm_print user_do_nothing_func

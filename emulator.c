@@ -241,10 +241,12 @@ void sisa64_emulate(){
 	{
 		uint64_t new_offset;
 		uint64_t new_max;
+		uint64_t ninstructions;
 		new_offset = gpregs[EAT_BYTE()];
 		new_max = gpregs[EAT_BYTE()];
 		regfile_loc = gpregs[EAT_BYTE()];
-		instruction_counter = PREEMPT_MAX - gpregs[EAT_BYTE()];
+		ninstructions = gpregs[EAT_BYTE()];
+		instruction_counter = PREEMPT_MAX - ninstructions;
 		maxsaved_regs = EAT_BYTE();
 
 		for(int i = 0; i <= maxsaved_regs; i++) gpregs[i] = READ64(regfile_loc+i*8);
@@ -258,7 +260,6 @@ void sisa64_emulate(){
 
 		is_user = 1;
 		Rcode = 0;
-		instruction_counter = 0;
 	}
 	DISPATCH();
 
