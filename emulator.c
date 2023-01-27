@@ -1223,7 +1223,7 @@ void sisa64_emulate(){
 		uint8_t regid_dest;
 		uint8_t regid_src;
 		uint8_t regid_testme;
-        uint64_t test;
+		uint64_t test;
 		regid_testme = EAT_BYTE();
 		regid_dest = EAT_BYTE();
 		regid_src = EAT_BYTE();
@@ -1235,9 +1235,8 @@ void sisa64_emulate(){
             +
             ((!test) * 
             	gpregs[regid_dest]
-            )
-        
-        ;
+			)
+ 		;
 	}
 	DISPATCH();
 
