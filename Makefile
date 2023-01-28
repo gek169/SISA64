@@ -17,6 +17,8 @@ q: example
 	admin make install
 	make ap
 
+test: example test_usermode rxincrmark
+
 uninstall:
 	rm -f /usr/local/bin/s64as
 	rm -f /usr/local/bin/s64e

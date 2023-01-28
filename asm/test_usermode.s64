@@ -30,7 +30,11 @@
 	ld8 0, q%userland_place%
 	im8 50,0
 	dwrite 50, 0
-
+	im8 0, '\n'
+	dwrite 50,0
+	dwrite 50,0
+	dwrite 50,0
+	dwrite 50,0
 
 	//halt
 	hlt;
