@@ -753,6 +753,13 @@ static unsigned long handle_dollar_normal(char* loc_in, char recursed){
 					mstrcpy(buf2,"ret");
 					return len;
 				}
+				if(!scope_has_retval){
+					puts(syntax_fail_pref);
+					puts("Scope does not have a return value, yet, there is something here...");
+					puts("Line:");
+					puts(line_copy);
+					exit(1);
+				}
 				/*We have something to evaluate...*/
 				if(loc_name[0] == '$'){ /*Perform a recursive call!*/
 					len_to_replace = handle_dollar_normal(loc_name,1);

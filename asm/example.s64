@@ -32,14 +32,13 @@ myVariable:
 
 
 //testing $ syntax...
-myFunction:
-${(int a, int b, int c) -> u64   : \
-		qword v;qword c2;
+add2_u64:
+${(int a, int b) -> u64   : \
+		qword result;
 
-	mov $v, $b; asm_print;
-	mov $+0!, $b; asm_print;
-	mov $c2, $b; asm_print;
-	$return $+0!; asm_print
+	mov $result, $a;
+	iadd $result, $b;
+	$return $result;
 	
 $}
 
