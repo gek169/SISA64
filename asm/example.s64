@@ -47,7 +47,6 @@ ${(int a, int b) -> u64:
 
 	iadd $a, $b;
 	$return $a; asm_print;
-	
 $}
 
 ..asciz:Hello World!
