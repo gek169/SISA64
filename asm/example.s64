@@ -9,7 +9,7 @@ im64 15,&%myVariable%
 looptop:
 
 //demoing single logical line mode
-$| //
+$| //after this line ends, every line afterward is interpreted as a single logical line.
 	ild16 0,15;
 	im8 1, 1;
 	iadd 0,1;
