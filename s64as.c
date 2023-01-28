@@ -112,6 +112,8 @@ static char* read_line_from_file(FILE* f, unsigned long* lenout, char terminator
 				}
 				/*match!*/
 				single_logical_line_mode = 0;
+				/*remove it from the string.*/
+				line[strlen(line) - len_end_single_logical_line_mode] = '\0';
 				goto local_end_1;
 			}
 		}
@@ -225,7 +227,7 @@ char* metaproc = NULL;
 unsigned long include_level = 0;
 
 int i_cli_args;
-const unsigned long nbuiltin_macros = 3; 
+const unsigned long nbuiltin_macros = 4; 
 
 
 /*
@@ -260,6 +262,7 @@ typedef struct{
 unsigned int scope_is_active = 0;
 scopevar scopevars[SCOPE_MAX_VARS];
 uint64_t scope_retval_type = 0;
+char scope_has_retval = 0;
 unsigned int scope_nvars = 0;
 
 uint64_t type_get_ptrlvl(uint64_t t){
@@ -484,6 +487,7 @@ void parse_vardecl(char* where, char** out){
 	unsigned long len;
 	char saved_character;
 	scopevar* setme;
+	unsigned long x; /*loop counter variable for checking matching identifiers.*/
 
 	setme = scopevars + scope_nvars;
 
@@ -512,6 +516,13 @@ void parse_vardecl(char* where, char** out){
 		if(isalnum(where[len]) || where[len] == '_') continue;
 		break;
 	}
+	if(len == 0){
+		puts(syntax_fail_pref);
+		puts("Invalid Local Variable Identifier.");
+		puts("Line:");
+		puts(line_copy);
+		exit(1);
+	}
 	if(len > SCOPE_MAX_VARNAME_LEN){
 		puts(syntax_fail_pref);
 		puts("Variable name has too many characters:");
@@ -523,11 +534,37 @@ void parse_vardecl(char* where, char** out){
 		puts(line_copy);
 		exit(1);
 	}
+
+	if(isdigit(where[0])){
+		puts(syntax_fail_pref);
+		puts("No local variables may start with a number.");
+		puts("Line:");
+		puts(line_copy);
+		exit(1);
+	}
 	/*write the variables name and type to scopevars.*/
 	saved_character = where[len];
 		where[len] = '\0';
-		mstrcpy(setme->name, where);
+		if(streq(where, "return")){
+			puts(syntax_fail_pref);
+			puts("You may not use 'return' as the name of a variable.");
+			puts("Line:");
+			puts(line_copy);
+			exit(1);
+		}
+		/*check for duplicate identifiers.*/
+		for(x = 0; x < scope_nvars;x++)
+			if(streq(scopevars[x].name, where)){
+				puts("Duplicate identifier declared.");
+				puts("Identifier:");
+				puts(where);
+				puts("Line:");
+				puts(line_copy);
+				exit(1);
+			}
+	mstrcpy(setme->name, where);
 	where[len] = saved_character;
+	scope_nvars++;
 	setme->type = t;
 	/*Skip the identifier...*/
 	where += len;
@@ -574,6 +611,7 @@ uint64_t type_getsz(uint64_t t){
 	if(t == TYPE_U16 || t == TYPE_I16) return 2;
 	if(t == TYPE_U32 || t == TYPE_I32|| t == TYPE_F32) return 4;
 	if(t == TYPE_U64 || t == TYPE_I64|| t == TYPE_F64) return 8;
+
 	puts(internal_fail_pref);
 	puts("Tried to get the size of an unknown type!");
 	puts("Line:");
@@ -587,6 +625,8 @@ static void handle_dollar_open_ccb(){
 	/*TODO: Handle previously malloc'd scope variable names.*/
 	scope_nvars = 0;
 	scope_is_active = 1;
+	scope_retval_type = 0xFFff;
+	scope_has_retval = 0;
 	char* s = line + 2;
 	while(isspace(*s)) s++; /*skip whitespace.*/
 	if(*s != '(' /*)*/){
@@ -605,10 +645,11 @@ static void handle_dollar_open_ccb(){
 		s+=2;
 		while(isspace(*s)) s++; /*skip whitespace.*/
 		scope_retval_type = parse_type(s, &s);
+		scope_has_retval = 1;
 		while(isspace(*s)) s++; /*skip whitespace.*/
 	}
 	if(s[0] == '\0'){
-		return; /*Done!*/
+		goto end; /*Done!*/
 	}
 	if(s[0] != ':'){
 		puts(syntax_fail_pref);
@@ -621,22 +662,13 @@ static void handle_dollar_open_ccb(){
 
 	while(1){
 		while(isspace(*s)) s++; /*skip whitespace.*/
+		/*Check for possible end of string.*/
 		if(
 			*s == '\0'
 		){
-			return;
+			goto end;
 		}
-		if(
-			*s == ';'
-		){
-			s++;
-			while(isspace(*s)) s++; /*skip whitespace.*/
-			return;
-		}
-		/*Parse a variable declaration.*/
-		parse_vardecl(s, &s);
-		while(isspace(*s)) s++; /*skip whitespace.*/
-
+		/*check for early semicolon.*/
 		if(
 			*s == ';'
 		){
@@ -644,7 +676,11 @@ static void handle_dollar_open_ccb(){
 			while(isspace(*s)) s++; /*skip whitespace.*/
 			continue;
 		}
-		/*Check for semicolon*/
+		/*Parse a variable declaration.*/
+		parse_vardecl(s, &s);
+		/*skip whitespace*/
+		while(isspace(*s)) s++; /*skip whitespace.*/
+		/*require a semicolon*/
 		if(*s != ';'){
 			puts(syntax_fail_pref);
 			puts("Expected semicolon in local variable list.");
@@ -653,8 +689,11 @@ static void handle_dollar_open_ccb(){
 			exit(1);
 		}
 		s++;
-		while(isspace(*s)) s++; /*skip whitespace.*/
 	}
+
+	end:;
+	line[0] = '\0';
+	return;
 	
 	
 }
@@ -672,9 +711,75 @@ static void handle_dollar_close_ccb(){
 }
 
 /*returns len_to_replace*/
-static unsigned long handle_dollar_normal(long len){
-	/*TODO*/
-	return 0;
+static unsigned long handle_dollar_normal(char* loc_in){
+	char saved_character;
+	long len = 0;
+	char* loc_name = loc_in+1;
+	long loc_eparen;
+	unsigned long i;
+	if( (isalnum(loc_name[0])) || loc_name[0] == '_')
+	{
+		while(1){
+			if((!isalnum(loc_name[len])) && (loc_name[len] != '_') ){
+				break;
+			}
+			len++;
+		}
+		if(isdigit(loc_name[0])){
+			puts(syntax_fail_pref);
+			puts("No local variables may start with a number.");
+			puts("Line:");
+			puts(line_copy);
+			exit(1);
+		}
+
+		saved_character = loc_name[len];
+		loc_name[len] = '\0';
+		for(i =0; i < scope_nvars; i++){
+			if(streq(scopevars[i].name, loc_name)) break;
+		}
+		if(i >= scope_nvars){
+			puts(syntax_fail_pref);
+			puts("Unrecognized Local Variable Identifier:");
+			puts(loc_name);
+			puts("Line:");
+			puts(line_copy);
+			exit(1);
+		}
+		loc_name[len] = saved_character;
+		//Now, we put our replacement in.
+		mutoa(buf2, i);
+		//return 1 + length of the identifier.
+		return 1 + len;
+	}
+
+	if(loc_name[0] == '+'){
+		loc_eparen = strfind(loc_name, "!");
+		if(loc_eparen == -1){
+			puts(syntax_fail_pref);
+			puts("In order to get an available register id, $+ must be ended with an exclamation mark, $+0! gets the first available.");
+			puts("Line:");
+			puts(line_copy);
+			exit(1);
+		}
+		len = 2 + loc_eparen; /*have to eat the dollar sign, plus sign, AND the exclamation mark...*/
+		if(!isdigit(loc_name[1])){
+			puts(syntax_fail_pref);
+			puts("A valid positive integer MUST be provided to $+!");
+			puts("Line:");
+			puts(line_copy);
+			exit(1);
+		}
+		i = matou(loc_name+1); /*Skip the initial plus sign.*/
+		mutoa(buf2, i + (scope_nvars));
+		return len;
+	}
+	puts(syntax_fail_pref);
+	puts("Unknown $ command.");
+	puts("Line:");
+	puts(line_copy);
+	exit(1);
+	return 1;
 }
 
 
@@ -1208,6 +1313,7 @@ static unsigned long handle_colon_macro(long loc){
 const unsigned MACRO_ID_PERCENT = 0;
 const unsigned MACRO_ID_AT = 1;
 const unsigned MACRO_ID_COLON = 2;
+const unsigned MACRO_ID_DOLLAR = 3;
 
 
 
@@ -1628,6 +1734,10 @@ static void do_macro_expansion(){
 							puts(line_copy);
 							goto error;							
 						}
+						strcat(buf1, buf2);
+					}
+					if(i == MACRO_ID_DOLLAR){
+						len_to_replace = handle_dollar_normal(line+loc);
 						strcat(buf1, buf2);
 					}
 					if (i == MACRO_ID_AT){ /*SYNTAX: @+7+ or @ alone*/
@@ -2660,8 +2770,10 @@ static void init_vars(){
 	variable_expansions[1] = variable_expansions[0];
 	variable_names[2] = ":";
 	variable_expansions[2] = "asm_label\\";
-	nmacros = 3;
-	if(nbuiltin_macros != 3) exit(1);
+	variable_names[3] = "$";
+	variable_expansions[3] = variable_expansions[0];
+	nmacros = 4;
+	if(nbuiltin_macros != 4) exit(1);
 }
 
 static void handle_cli_args(int argc, char** argv){
@@ -2984,6 +3096,11 @@ int main(int argc, char** argv){
 				handle_dollar_close_ccb();
 				goto end;
 			}
+
+			if(strprefix("${", line)){
+				handle_dollar_open_ccb();
+				goto end_of_syntax_sugar_eval;
+			}
 	
 			remove_comments();
 	
@@ -3065,7 +3182,8 @@ int main(int argc, char** argv){
 			if(strprefix(end_single_logical_line_mode, line)){
 				/*enable or disable single logical line mode.*/
 				single_logical_line_mode = !single_logical_line_mode;
-				/**/
+				/*Remove it from the string.*/
+				mstrcpy(line, line + len_end_single_logical_line_mode);
 			}
 			
 

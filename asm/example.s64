@@ -8,7 +8,7 @@ im64 15,&%myVariable%
 looptop:
 
 //demoing single logical line mode
-$|
+$| //
 	ild16 0,15;
 	iadd 0,1;
 	ist16 15,0;
@@ -29,6 +29,19 @@ $|
 
 myVariable:
 	longs 0
+
+
+//testing $ syntax...
+myFunction:
+${(int a, int b, int c) -> u64   : \
+		qword v;qword c2;
+
+	mov $v, $b; asm_print;
+	mov $+0!, $b; asm_print;
+	ret;
+	
+$}
+
 
 ..asciz:Hello World!
 
