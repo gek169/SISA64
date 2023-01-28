@@ -36,8 +36,7 @@ add2_u64:
 ${(int a, int b) -> u64   : \
 		qword result;
 
-	mov $result, $a;
-	iadd $result, $b;
+	mov $result, $a;iadd $result, $b; asm_print;
 	$return $result; asm_print;
 	
 $}
