@@ -17,8 +17,11 @@ uninstall:
 	rm -f /usr/local/bin/s64as
 	rm -f /usr/local/bin/s64e
 
-upd:
-	git add .; git commit -m "Automatic Commit, make upd"; git push -f;
+ap:
+	git add .; git commit -m "Automatic Commit, make ap"; git push -f;
+
+pull:
+	git pull -f;
 
 clean:
 	rm -f *.bin *.out *.s64sym *.exe s64as s64e asm/*.bin asm/*.out asm/*.s64sym asm/*.exe
