@@ -48,8 +48,42 @@ Ideas for the SISA64 architecture:
 	bswap32 rid
 	bswap16 rid
 
-6) mnz instruction- move if not zero.
+6) mnz instruction- move if not zero. - IMPLEMENTED
 
 	mnz rid_test, rid_dest, rid_src
 
-7) 
+7) Scopes and Local variables.
+
+I would like to implement scopes in SISA64, with local variables that are register allocated.
+
+Basically, all scope variables are registers. Their names with a dollar sign in front of them
+
+are their register IDs.
+
+I can implement structs and arrays by having a stack allocation and having a pointer to the object
+
+stored in a register, whose register ID is the variable's name in the assembly language.
+
+myFunction:
+//the following line modifies scope state internally.
+//I've decided that I will not make it allocate anything on the stack.
+//So it should be really easy to generate.
+
+//the format of a scope start is requires a pair of parentheses,
+//with an optional comma-separated list of variable definitions.
+//Then a return value.
+
+${(u64 a, u64 b) -> u64:\
+		u64 c; 			\//2
+		f64 mydouble;	\//3
+		u64 i;			\//4
+		u64 tmp1;		\//5
+	
+	mov $c, $a; //translates to mov 2, 0;
+	iadd $c, $b; //translates to iadd 2, 1;
+
+	$return $c; //translates to mov 0, 2;
+	
+
+
+$} //end scope

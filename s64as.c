@@ -12,6 +12,7 @@
 
 #include "libmin.h"
 #include "insns.h"
+#include "be_encoder.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -225,6 +226,459 @@ unsigned long include_level = 0;
 
 int i_cli_args;
 const unsigned long nbuiltin_macros = 3; 
+
+
+/*
+	Scope code.
+
+*/
+#define SCOPE_MAX_VARS 256
+enum{
+	TYPE_U8=0,
+	TYPE_I8=1,	
+	
+	TYPE_U16=2,
+	TYPE_I16=3,	
+
+	TYPE_U32=4,
+	TYPE_I32=5,	
+
+	TYPE_F32=6,	
+
+	TYPE_U64=7,
+	TYPE_I64=8,
+
+	TYPE_F64=9
+};
+
+#define SCOPE_MAX_VARNAME_LEN 127
+typedef struct{
+	char name[SCOPE_MAX_VARNAME_LEN + 1];
+	uint64_t type;	
+} scopevar;
+
+unsigned int scope_is_active = 0;
+scopevar scopevars[SCOPE_MAX_VARS];
+uint64_t scope_retval_type = 0;
+unsigned int scope_nvars = 0;
+
+uint64_t type_get_ptrlvl(uint64_t t){
+	return t / 16;
+}
+
+int type_is_ptr(uint64_t t){
+	return type_get_ptrlvl(t) != 0;
+}
+
+uint64_t parse_type(char* where, char** out){
+	uint64_t basetype = 0;
+	uint64_t ptrlevel = 0;
+	uint64_t retval = 0;
+	while(isspace(*where))where++;
+
+	if(strprefix("u8",where)){
+		where += 2;
+		basetype = 0;
+		goto after_basetype;
+	}	
+	if(strprefix("byte",where)){
+		where += 4;
+		basetype = 0;
+		goto after_basetype;
+	}
+	if(strprefix("char",where)){
+		where += 4;
+		basetype = 0;
+		goto after_basetype;
+	}	
+	if(strprefix("uchar",where)){
+		where += 5;
+		basetype = 0;
+		goto after_basetype;
+	}	
+	if(strprefix("ubyte",where)){
+		where += 5;
+		basetype = 0;
+		goto after_basetype;
+	}	
+
+
+	if(strprefix("i8",where)){
+		where += 2;
+		basetype = 1;
+		goto after_basetype;
+	}
+	if(strprefix("sbyte",where)){
+		where += 5;
+		basetype = 1;
+		goto after_basetype;
+	}	
+	if(strprefix("schar",where)){
+		where += 5;
+		basetype = 1;
+		goto after_basetype;
+	}	
+
+
+
+	if(strprefix("u16",where)){
+		where += 3;
+		basetype = 2;
+		goto after_basetype;
+	}	
+	if(strprefix("ushort",where)){
+		where += 6;
+		basetype = 2;
+		goto after_basetype;
+	}	
+
+
+	if(strprefix("i16",where)){
+		where += 3;
+		basetype = 3;
+		goto after_basetype;
+	}	
+	if(strprefix("short",where)){
+		where += 5;
+		basetype = 3;
+		goto after_basetype;
+	}	
+	if(strprefix("sshort",where)){
+		where += 6;
+		basetype = 3;
+		goto after_basetype;
+	}	
+
+
+	if(strprefix("u32",where)){
+		where += 3;
+		basetype = 4;
+		goto after_basetype;
+	}	
+	if(strprefix("uint",where)){
+		where += 4;
+		basetype = 4;
+		goto after_basetype;
+	}	
+	if(strprefix("ulong",where)){
+		where += 5;
+		basetype = 4;
+		goto after_basetype;
+	}
+	if(strprefix("unsigned",where)){
+		where += 8;
+		basetype = 4;
+		goto after_basetype;
+	}
+
+	if(strprefix("i32",where)){
+		where += 3;
+		basetype = 5;
+		goto after_basetype;
+	}	
+	if(strprefix("int",where)){
+		where += 3;
+		basetype = 5;
+		goto after_basetype;
+	}	
+	if(strprefix("long",where)){
+		where += 4;
+		basetype = 5;
+		goto after_basetype;
+	}
+	if(strprefix("signed",where)){
+		where += 6;
+		basetype = 5;
+		goto after_basetype;
+	}
+
+
+	
+	if(strprefix("u64",where)){
+		where += 3;
+		basetype = 7;
+		goto after_basetype;
+	}		
+	if(strprefix("qword",where)){
+		where += 5;
+		basetype = 7;
+		goto after_basetype;
+	}
+	if(strprefix("uqword",where)){
+		where += 6;
+		basetype = 7;
+		goto after_basetype;
+	}
+	if(strprefix("ullong",where)){
+		where += 6;
+		basetype = 7;
+		goto after_basetype;
+	}
+
+
+	
+	if(strprefix("i64",where)){
+		where += 3;
+		basetype = 8;
+		goto after_basetype;
+	}		
+	if(strprefix("sqword",where)){
+		where += 6;
+		basetype = 8;
+		goto after_basetype;
+	}
+	if(strprefix("llong",where)){
+		where += 5;
+		basetype = 8;
+		goto after_basetype;
+	}
+	if(strprefix("sllong",where)){
+		where += 6;
+		basetype = 8;
+		goto after_basetype;
+	}
+
+	
+	//floating point types.
+	if(strprefix("float",where)){
+		where += 5;
+		basetype = 6;
+		goto after_basetype;
+	}	
+	if(strprefix("f32",where)){
+		where += 3;
+		basetype = 6;
+		goto after_basetype;
+	}
+	if(strprefix("f64",where)){
+		where += 3;
+		basetype = 9;
+		goto after_basetype;
+	}
+	if(strprefix("double",where)){
+		where += 6;
+		basetype = 9;
+		goto after_basetype;
+	}
+
+	puts(syntax_fail_pref);
+	puts("Could not identify base type while parsing type.");
+	puts("Line:");
+	puts(line_copy);
+
+	after_basetype:;
+	ptrlevel = 0;
+	while(*where == '*'){
+		ptrlevel++;where++;
+	}
+	retval = basetype | (ptrlevel*16);
+
+	if(out)
+		*out = where;
+	return retval;
+}
+
+
+void parse_vardecl(char* where, char** out){
+	uint64_t t;
+	unsigned long len;
+	char saved_character;
+	scopevar* setme;
+
+	setme = scopevars + scope_nvars;
+
+	if(scope_nvars == SCOPE_MAX_VARS){
+		puts(general_fail_pref);
+		puts("Too many scope variables are declared.");
+		puts("Line:");
+		puts(line_copy);
+	}
+
+	while(isspace(*where))where++;
+	t = parse_type(where, &where);
+	/*Require at least one space...*/
+	if(!isspace(*where)){
+		puts(syntax_fail_pref);
+		puts("Expected space character during variable declaration parsing. Line:");
+		puts(line_copy);
+		exit(1);
+	}
+	while(isspace(*where))where++;
+	/*walk the string until we hit a non-identifier character.*/
+	for(len = 0;
+		where[len]!='\0';
+		len++
+	){
+		if(isalnum(where[len]) || where[len] == '_') continue;
+		break;
+	}
+	if(len > SCOPE_MAX_VARNAME_LEN){
+		puts(syntax_fail_pref);
+		puts("Variable name has too many characters:");
+		saved_character = where[len];
+			where[len] = '\0';
+			puts(where);
+		where[len] = saved_character;
+		puts("Line:");
+		puts(line_copy);
+		exit(1);
+	}
+	/*write the variables name and type to scopevars.*/
+	saved_character = where[len];
+		where[len] = '\0';
+		mstrcpy(setme->name, where);
+	where[len] = saved_character;
+	setme->type = t;
+	/*Skip the identifier...*/
+	where += len;
+	if(out)
+		*out = where;
+	return;
+}
+
+void parse_arglist(char* where, char** out){
+	while(isspace(*where))where++;
+	/*Empty argument list?*/
+	if(*where == /*(*/')'){
+		where++;
+		if(out) *out = where;
+		return;
+	}
+
+	while(1){
+		while(isspace(*where))where++;
+		parse_vardecl(where, &where);
+		while(isspace(*where))where++;
+		if(*where == /*(*/')')
+		{
+			where++;
+			if(out) *out = where;
+			return;
+		}
+		if(*where != ','){
+			puts(syntax_fail_pref);
+			puts("Expected comma or closing parentheses in argument list.");
+			puts("Line:");
+			puts(line_copy);
+			exit(1);
+		}
+		where++;
+	}
+}
+
+
+
+uint64_t type_getsz(uint64_t t){
+	if(type_is_ptr(t)) return 8;
+	if(t == TYPE_U8 || t == TYPE_I8) return 1;
+	if(t == TYPE_U16 || t == TYPE_I16) return 2;
+	if(t == TYPE_U32 || t == TYPE_I32|| t == TYPE_F32) return 4;
+	if(t == TYPE_U64 || t == TYPE_I64|| t == TYPE_F64) return 8;
+	puts(internal_fail_pref);
+	puts("Tried to get the size of an unknown type!");
+	puts("Line:");
+	puts(line_copy);
+	exit(1);
+}
+
+
+
+static void handle_dollar_open_ccb(){
+	/*TODO: Handle previously malloc'd scope variable names.*/
+	scope_nvars = 0;
+	scope_is_active = 1;
+	char* s = line + 2;
+	while(isspace(*s)) s++; /*skip whitespace.*/
+	if(*s != '(' /*)*/){
+		puts(syntax_fail_pref);
+		puts("Scope syntax REQUIRES a function prototype, including OPEN PARENTHESES.");
+		puts("Line:");
+		puts(line_copy);
+		exit(1);
+	}
+	s++; /*consume open parentheses.*/
+	while(isspace(*s)) s++; /*skip whitespace.*/
+	parse_arglist(s, &s);
+	while(isspace(*s)) s++; /*skip whitespace.*/
+	/*Check for the presence of ->*/
+	if(strprefix("->",s)){
+		s+=2;
+		while(isspace(*s)) s++; /*skip whitespace.*/
+		scope_retval_type = parse_type(s, &s);
+		while(isspace(*s)) s++; /*skip whitespace.*/
+	}
+	if(s[0] == '\0'){
+		return; /*Done!*/
+	}
+	if(s[0] != ':'){
+		puts(syntax_fail_pref);
+		puts("Scope declaration requires colon separator before local variable list.");
+		puts("Line:");
+		puts(line_copy);
+		exit(1);
+	}
+	s++; /*consume colon*/
+
+	while(1){
+		while(isspace(*s)) s++; /*skip whitespace.*/
+		if(
+			*s == '\0'
+		){
+			return;
+		}
+		if(
+			*s == ';'
+		){
+			s++;
+			while(isspace(*s)) s++; /*skip whitespace.*/
+			return;
+		}
+		/*Parse a variable declaration.*/
+		parse_vardecl(s, &s);
+		while(isspace(*s)) s++; /*skip whitespace.*/
+
+		if(
+			*s == ';'
+		){
+			s++;
+			while(isspace(*s)) s++; /*skip whitespace.*/
+			continue;
+		}
+		/*Check for semicolon*/
+		if(*s != ';'){
+			puts(syntax_fail_pref);
+			puts("Expected semicolon in local variable list.");
+			puts("Line:");
+			puts(line_copy);
+			exit(1);
+		}
+		s++;
+		while(isspace(*s)) s++; /*skip whitespace.*/
+	}
+	
+	
+}
+
+static void handle_dollar_close_ccb(){
+	if(!scope_is_active){
+		puts(general_fail_pref);
+		puts("Tried to close a scope when there was none active.");
+		puts("Line:");
+		puts(line_copy);
+		exit(1);
+	}
+	scope_is_active = 0;
+	return;
+}
+
+/*returns len_to_replace*/
+static unsigned long handle_dollar_normal(long len){
+	/*TODO*/
+	return 0;
+}
+
+
+
 
 
 static void mini_expander(unsigned long len_command){
@@ -2447,7 +2901,8 @@ int main(int argc, char** argv){
 			fseek(infile, 0, SEEK_SET),
 		 	(outputcounter=0),
 		 	(label_generator = 0),
-		 	(label_offset = 0)
+		 	(label_offset = 0),
+		 	(scope_is_active = 0)
 		)
 		{/*For loop, 2 passes*/
 		while(1){ /*While loop fetching lines*/
@@ -2524,6 +2979,11 @@ int main(int argc, char** argv){
 	
 			/*handle comments...*/
 			if(strprefix("#!",(char*)line)) goto end;
+
+			if(strprefix("$}", line)){
+				handle_dollar_close_ccb();
+				goto end;
+			}
 	
 			remove_comments();
 	
