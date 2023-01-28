@@ -83,7 +83,7 @@ static char* read_line_from_file(FILE* f, unsigned long* lenout, char terminator
 	}
 
 	
-	/*while*/local_top_1:;
+	while(1)
 	{
 		
 		if(feof(f)){goto local_end_1;}
@@ -91,8 +91,8 @@ static char* read_line_from_file(FILE* f, unsigned long* lenout, char terminator
 		if(!single_logical_line_mode) if(c == terminator) goto local_end_1;
 
 
-		if(c == '\r') goto local_top_1; /*Lines read from file should eliminate carriage return.*/
-		if(c > 0x80) goto local_top_1; /*Invalid character.*/
+		if(c == '\r') continue; /*Lines read from file should eliminate carriage return.*/
+		if(c > 0x80) continue; /*Invalid character.*/
 		if(blen == (WKBUF_SZ-1))	/*too big*/
 			{
 				puts(general_fail_pref);
@@ -108,7 +108,7 @@ static char* read_line_from_file(FILE* f, unsigned long* lenout, char terminator
 						line[blen-i] 
 						!= 
 						end_single_logical_line_mode[len_end_single_logical_line_mode-i]
-					) goto local_top_1;
+					) continue;
 				}
 				/*match!*/
 				single_logical_line_mode = 0;
@@ -117,8 +117,10 @@ static char* read_line_from_file(FILE* f, unsigned long* lenout, char terminator
 				goto local_end_1;
 			}
 		}
-		goto local_top_1;
+		continue;
 	}
+
+	
 	local_end_1:;
 	line[blen] = '\0';
 	*lenout = blen;
