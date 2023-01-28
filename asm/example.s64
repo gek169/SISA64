@@ -38,7 +38,8 @@ ${(int a, int b, int c) -> u64   : \
 
 	mov $v, $b; asm_print;
 	mov $+0!, $b; asm_print;
-	ret;
+	mov $c2, $b; asm_print;
+	$return $+0!; asm_print
 	
 $}
 

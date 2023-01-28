@@ -545,9 +545,9 @@ void parse_vardecl(char* where, char** out){
 	/*write the variables name and type to scopevars.*/
 	saved_character = where[len];
 		where[len] = '\0';
-		if(streq(where, "return")){
+		if(streq("return",where)){
 			puts(syntax_fail_pref);
-			puts("You may not use 'return' as the name of a variable.");
+			puts("You may not name a variable 'return'.");
 			puts("Line:");
 			puts(line_copy);
 			exit(1);
@@ -711,14 +711,74 @@ static void handle_dollar_close_ccb(){
 }
 
 /*returns len_to_replace*/
-static unsigned long handle_dollar_normal(char* loc_in){
+static unsigned long handle_dollar_normal(char* loc_in, char recursed){
 	char saved_character;
 	long len = 0;
 	char* loc_name = loc_in+1;
 	long loc_eparen;
 	unsigned long i;
+	long len_to_replace;
+	unsigned long val;
+	
+	if(!recursed)
+		if(strprefix("return",loc_name))
+			if(!(isalnum(loc_name[6]) ||	 loc_name[6] == '_') )
+			{
+				/*return statement.*/
+				len = 1;
+				loc_name += 6; /*we have to eat the return.*/
+				len += 6;
+				while(isspace(loc_name[0])){loc_name++;len++;} /*eat the spaces, too!*/
+				/*do we stop here? First, invalidate return if it has no semicolon.*/
+				loc_eparen = strfind(loc_name, ";");
+				if(loc_eparen == -1){
+					return_no_semicolon:;
+					puts(syntax_fail_pref);
+					puts("the $return statement must end in a semicolon.");
+					puts("Line:");
+					puts(line_copy);
+					puts("Line Internally:");
+					puts(line);
+					exit(1);
+				}
+				if(loc_name[0] == '\0' || loc_name[0] == ';'){
+					if(scope_has_retval){
+						puts(syntax_fail_pref);
+						puts("Scope has a return value, but return has no register ID to return!");
+						puts("Line:");
+						puts(line_copy);
+						exit(1);
+					}
+					/*Leave the semicolon!*/
+					mstrcpy(buf2,"ret");
+					return len;
+				}
+				/*We have something to evaluate...*/
+				if(loc_name[0] == '$'){ /*Perform a recursive call!*/
+					len_to_replace = handle_dollar_normal(loc_name,1);
+					/*The appropriate replacement is in buf2, and we don't want to rewrite the code, so....*/
+					mstrcpy(buf3, loc_name + len_to_replace); /*The portion after the stuff we just figured out how to replace*/
+					mstrcpy(loc_name, buf2); /*Overwrite with the replacement.*/
+					strcat(loc_name, buf3);/*concatenate back the stuff we saved.*/
+				}
+
+				loc_eparen = strfind(loc_name, ";");
+				if(loc_eparen == -1){ /*This is probably redundant.*/
+					goto return_no_semicolon;
+				}
+				if(!misdigit(loc_name[0])){
+					puts(syntax_fail_pref);
+					puts("Return value takes a register id. Either use a $variable_name, $+13! or an integer literal.");
+				}
+				val = matou(loc_name);
+				mstrcpy(buf2, "mov 0,");
+				mutoa(buf2 + strlen(buf2),val);
+				strcat(buf2, ";ret");
+				return len + loc_eparen; /*We want to leave the semicolon.*/
+			}
 	if( (isalnum(loc_name[0])) || loc_name[0] == '_')
 	{
+		len = 0;
 		while(1){
 			if((!isalnum(loc_name[len])) && (loc_name[len] != '_') ){
 				break;
@@ -754,6 +814,7 @@ static unsigned long handle_dollar_normal(char* loc_in){
 	}
 
 	if(loc_name[0] == '+'){
+		len = 0;
 		loc_eparen = strfind(loc_name, "!");
 		if(loc_eparen == -1){
 			puts(syntax_fail_pref);
@@ -771,7 +832,15 @@ static unsigned long handle_dollar_normal(char* loc_in){
 			exit(1);
 		}
 		i = matou(loc_name+1); /*Skip the initial plus sign.*/
-		mutoa(buf2, i + (scope_nvars));
+		i += scope_nvars;
+		if(i > 255){
+			puts(general_fail_pref);
+			puts("The register ID generated from a $+! goes beyond the limits of S-ISA-64 standard.");
+			puts("Line:");
+			puts(line_copy);
+			exit(1);
+		}
+		mutoa(buf2, i);
 		return len;
 	}
 	puts(syntax_fail_pref);
@@ -1737,7 +1806,7 @@ static void do_macro_expansion(){
 						strcat(buf1, buf2);
 					}
 					if(i == MACRO_ID_DOLLAR){
-						len_to_replace = handle_dollar_normal(line+loc);
+						len_to_replace = handle_dollar_normal(line+loc, 0);
 						strcat(buf1, buf2);
 					}
 					if (i == MACRO_ID_AT){ /*SYNTAX: @+7+ or @ alone*/
