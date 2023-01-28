@@ -778,6 +778,10 @@ static unsigned long handle_dollar_normal(char* loc_in, char recursed){
 					puts("Return value takes a register id. Either use a $variable_name, $+13! or an integer literal.");
 				}
 				val = matou(loc_name);
+				if(val == 0){ /*OPTIMIZATION! don't move a register into itself!*/
+					mstrcpy(buf2, "ret");
+					return len + loc_eparen;					
+				}
 				mstrcpy(buf2, "mov 0,");
 				mutoa(buf2 + strlen(buf2),val);
 				strcat(buf2, ";ret");

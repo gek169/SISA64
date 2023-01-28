@@ -38,10 +38,17 @@ ${(int a, int b) -> u64   : \
 
 	mov $result, $a;
 	iadd $result, $b;
-	$return $result;
+	$return $result; asm_print;
 	
 $}
 
+add2_u64_2:
+${(int a, int b) -> u64:
+
+	iadd $a, $b;
+	$return $a; asm_print;
+	
+$}
 
 ..asciz:Hello World!
 
