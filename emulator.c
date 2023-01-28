@@ -1243,6 +1243,8 @@ void sisa64_emulate(){
 	
 	J_NOP:DISPATCH();
 
+	/*unused*/
+
 	J_HLT:;
 	Rcode = ERROK;
 	if(is_user) 
