@@ -13,11 +13,15 @@ install: all
 	cp s64as /usr/local/bin/
 	cp s64e /usr/local/bin/
 
+q: example
+	admin make install
+	make ap
+
 uninstall:
 	rm -f /usr/local/bin/s64as
 	rm -f /usr/local/bin/s64e
 
-ap:
+ap: clean
 	git add .; git commit -m "Automatic Commit, make ap"; git push -f;
 
 pull:
