@@ -1,5 +1,5 @@
 CC=gcc
-OPTIMIZE=-Ofast -march=native
+OPTIMIZE=-O3 -march=native
 
 all: clean s64as s64e
 
@@ -21,13 +21,17 @@ clean:
 	rm -f *.bin *.out *.s64sym *.exe s64as s64e asm/*.bin asm/*.out asm/*.s64sym asm/*.exe
 
 example: all
-	cd asm && ../s64as -i example.s64 -o example.bin && ../s64e example.bin
-
+	./s64as -i asm/example.s64 -o example.bin
+	./s64e example.bin
+	
 example2: all
-	cd asm && ../s64as -i example2.s64 -o example2.bin && ../s64e example2.bin
+	./s64as -i asm/example2.s64 -o example2.bin
+	./s64e example2.bin
 
 test_usermode: all
-	cd asm && ../s64as -i test_usermode.s64 -o test_usermode.bin && ../s64e test_usermode.bin
+	./s64as -i asm/test_usermode.s64 -o test_usermode.bin
+	./s64e test_usermode.bin
 
 rxincrmark: all
-	cd asm && ../s64as -i rxincrmark.s64 -o rxincrmark.bin
+	./s64as -i asm/rxincrmark.s64 -o rxincrmark.bin
+	time ./s64e rxincrmark.bin
