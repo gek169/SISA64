@@ -81,11 +81,8 @@ static char* read_line_from_file(FILE* f, unsigned long* lenout, char terminator
 		blen = strlen((char*)line);
 		rut_append_to_me = 0;
 	}
-
-	
 	while(1)
-	{
-		
+	{while_looptop:;
 		if(feof(f)){goto local_end_1;}
 		c = fgetc(f);
 		if(!single_logical_line_mode) if(c == terminator) goto local_end_1;
@@ -93,13 +90,17 @@ static char* read_line_from_file(FILE* f, unsigned long* lenout, char terminator
 
 		if(c == '\r') continue; /*Lines read from file should eliminate carriage return.*/
 		if(c > 0x80) continue; /*Invalid character.*/
-		if(blen == (WKBUF_SZ-1))	/*too big*/
+		if(blen >= (WKBUF_SZ-1))	/*too big*/
 			{
 				puts(general_fail_pref);
 				puts("Oversized line!");
 				exit(1);
 			}
 		line[blen++] = (char)c;
+
+
+
+
 		if(single_logical_line_mode){
 			/*We need to check if the last three characters were the end of a single logical line.*/
 			if(strlen(line) > len_end_single_logical_line_mode){
@@ -108,19 +109,17 @@ static char* read_line_from_file(FILE* f, unsigned long* lenout, char terminator
 						line[blen-i] 
 						!= 
 						end_single_logical_line_mode[len_end_single_logical_line_mode-i]
-					) continue;
+					) goto while_looptop;
 				}
 				/*match!*/
 				single_logical_line_mode = 0;
 				/*remove it from the string.*/
-				line[strlen(line) - len_end_single_logical_line_mode] = '\0';
+				line[blen - len_end_single_logical_line_mode] = '\0';
 				goto local_end_1;
 			}
 		}
 		continue;
 	}
-
-	
 	local_end_1:;
 	line[blen] = '\0';
 	*lenout = blen;
@@ -732,9 +731,9 @@ static unsigned long handle_dollar_normal(char* loc_in, char recursed){
 	unsigned long i;
 	long len_to_replace;
 	unsigned long val;
-	if(loc_name[0] == '|'){
+/*	if(loc_name[0] == '|'){
 		return 2;
-	}
+	}*/
 	if(!recursed)
 		if(strprefix("return",loc_name))
 			if(!(isalnum(loc_name[6]) ||	 loc_name[6] == '_') )
