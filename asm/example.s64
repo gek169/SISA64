@@ -1,43 +1,50 @@
 
 
 
+im64 0, q%30000%
+setstp 0
 
 nop
-im64 1, q%1%
 im64 15,&%myVariable%
 looptop:
 
 //demoing single logical line mode
 $| //
 	ild16 0,15;
+	im8 1, 1;
 	iadd 0,1;
 	ist16 15,0;
-	//write out a number
-	im8 25,'F';
-	im8 26,0;
-	dwrite 26,25;
+	//write out a character
+		im8 1, '0';
+		im8 130,10;
+		umod 0,130;
+		//im8 0,  1;
+		call &%add2_u64%;
+		dwrite 26,0;
 	im8 25,'\n';
 	dwrite 26,25;
 	//grab our number for testing.	
 	ild16	 0,15;
 	
 	jnz 0,q%looptop%;
+	
 $|
 
 
 
 
 myVariable:
-	longs 0
+	shorts 0
 
 
 //testing $ syntax...
 add2_u64:
 ${(int a, int b) -> u64   : \
-		qword result;
+		qword return_value;
 
-	mov $result, $a;iadd $result, $b; asm_print;
-	$return $result; asm_print;
+	mov $return_value, $a;
+	iadd $return_value, $b; asm_print;
+	$return $return_value; asm_print;
 	
 $}
 

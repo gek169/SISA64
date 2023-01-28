@@ -642,7 +642,7 @@ void sisa64_emulate(){
 			Rcode = ERR_INTMATH; /*Integer math error*/
 			goto BECOME_PRIVILEGED;
 		}
-		gpregs[regid_dest] = divisor / divisee;
+		gpregs[regid_dest] = divisee / divisor;
 	}
 	DISPATCH();
 
@@ -662,7 +662,7 @@ void sisa64_emulate(){
 			Rcode = ERR_INTMATH; /*Integer math error*/
 			goto BECOME_PRIVILEGED;
 		}
-		gpregs[regid_dest] = divisor / divisee;
+		gpregs[regid_dest] = divisee / divisor;
 	}
 	DISPATCH();
 
@@ -683,7 +683,7 @@ void sisa64_emulate(){
 			Rcode = ERR_INTMATH; /*Integer math error*/
 			goto BECOME_PRIVILEGED;
 		}
-		gpregs[regid_dest] = divisor % divisee;
+		gpregs[regid_dest] = divisee % divisor;
 	}
 	DISPATCH();
 
@@ -703,7 +703,7 @@ void sisa64_emulate(){
 			Rcode = ERR_INTMATH; /*Integer math error*/
 			goto BECOME_PRIVILEGED;
 		}
-		gpregs[regid_dest] = divisor % divisee;
+		gpregs[regid_dest] = divisee % divisor;
 	}
 	DISPATCH();
 

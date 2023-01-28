@@ -250,33 +250,42 @@ enum{
 	TYPE_U64=7,
 	TYPE_I64=8,
 
-	TYPE_F64=9
+	TYPE_F64=9,
+	TYPE_STRUCT=10
 };
 
 #define SCOPE_MAX_VARNAME_LEN 127
+
+typedef struct{
+	uint64_t basetype;
+	uint64_t ptrlevel;
+	uint8_t is_lvalue;
+	uint64_t structid;
+} type;
+
 typedef struct{
 	char name[SCOPE_MAX_VARNAME_LEN + 1];
-	uint64_t type;	
+	type t;	
 } scopevar;
 
 unsigned int scope_is_active = 0;
 scopevar scopevars[SCOPE_MAX_VARS];
-uint64_t scope_retval_type = 0;
+type scope_retval_type = {0};
 char scope_has_retval = 0;
 unsigned int scope_nvars = 0;
 
-uint64_t type_get_ptrlvl(uint64_t t){
-	return t / 16;
+uint64_t type_get_ptrlvl(type t){
+	return t.ptrlevel;
 }
 
-int type_is_ptr(uint64_t t){
+int type_is_ptr(type t){
 	return type_get_ptrlvl(t) != 0;
 }
 
-uint64_t parse_type(char* where, char** out){
-	uint64_t basetype = 0;
+type parse_type(char* where, char** out){
+	uint64_t basetype = 7;
 	uint64_t ptrlevel = 0;
-	uint64_t retval = 0;
+	type t;
 	while(isspace(*where))where++;
 
 	if(strprefix("u8",where)){
@@ -468,22 +477,27 @@ uint64_t parse_type(char* where, char** out){
 	puts("Could not identify base type while parsing type.");
 	puts("Line:");
 	puts(line_copy);
-
+	exit(1);
+	
 	after_basetype:;
 	ptrlevel = 0;
 	while(*where == '*'){
-		ptrlevel++;where++;
+		ptrlevel++;
+		where++;
 	}
-	retval = basetype | (ptrlevel*16);
+
+	t.basetype = basetype;
+	t.is_lvalue = 1;
+	t.ptrlevel = ptrlevel;
 
 	if(out)
 		*out = where;
-	return retval;
+	return t;
 }
 
 
 void parse_vardecl(char* where, char** out){
-	uint64_t t;
+	type t;
 	unsigned long len;
 	char saved_character;
 	scopevar* setme;
@@ -565,7 +579,7 @@ void parse_vardecl(char* where, char** out){
 	mstrcpy(setme->name, where);
 	where[len] = saved_character;
 	scope_nvars++;
-	setme->type = t;
+	setme->t = t;
 	/*Skip the identifier...*/
 	where += len;
 	if(out)
@@ -605,12 +619,12 @@ void parse_arglist(char* where, char** out){
 
 
 
-uint64_t type_getsz(uint64_t t){
+uint64_t type_getsz(type t){
 	if(type_is_ptr(t)) return 8;
-	if(t == TYPE_U8 || t == TYPE_I8) return 1;
-	if(t == TYPE_U16 || t == TYPE_I16) return 2;
-	if(t == TYPE_U32 || t == TYPE_I32|| t == TYPE_F32) return 4;
-	if(t == TYPE_U64 || t == TYPE_I64|| t == TYPE_F64) return 8;
+	if(t.basetype == TYPE_U8 || t.basetype == TYPE_I8) return 1;
+	if(t.basetype == TYPE_U16 || t.basetype == TYPE_I16) return 2;
+	if(t.basetype == TYPE_U32 || t.basetype == TYPE_I32|| t.basetype == TYPE_F32) return 4;
+	if(t.basetype == TYPE_U64 || t.basetype == TYPE_I64|| t.basetype == TYPE_F64) return 8;
 
 	puts(internal_fail_pref);
 	puts("Tried to get the size of an unknown type!");
@@ -625,7 +639,6 @@ static void handle_dollar_open_ccb(){
 	/*TODO: Handle previously malloc'd scope variable names.*/
 	scope_nvars = 0;
 	scope_is_active = 1;
-	scope_retval_type = 0xFFff;
 	scope_has_retval = 0;
 	char* s = line + 2;
 	while(isspace(*s)) s++; /*skip whitespace.*/
@@ -694,8 +707,6 @@ static void handle_dollar_open_ccb(){
 	end:;
 	line[0] = '\0';
 	return;
-	
-	
 }
 
 static void handle_dollar_close_ccb(){
@@ -719,7 +730,9 @@ static unsigned long handle_dollar_normal(char* loc_in, char recursed){
 	unsigned long i;
 	long len_to_replace;
 	unsigned long val;
-	
+	if(loc_name[0] == '|'){
+		return 2;
+	}
 	if(!recursed)
 		if(strprefix("return",loc_name))
 			if(!(isalnum(loc_name[6]) ||	 loc_name[6] == '_') )
