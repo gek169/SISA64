@@ -31,6 +31,7 @@ uint64_t dev_read(uint64_t addr){
 	if(addr == 0) return getchar();
 	if(addr == 1) return SYS_MEMORY_SIZE;
 	if(addr == 2) return clock() / (CLOCKS_PER_SEC/1000);
+	if(addr == 0x1000000) return 1; /*Device Standard*/
 	return 0;
 }
 void dev_write(uint64_t addr, uint64_t val){
