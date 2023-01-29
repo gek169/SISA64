@@ -16,7 +16,7 @@ $| //after this line ends, every line afterward is interpreted as a single logic
 	ist16 15,0;
 	//write out a character
 		im8 1, '0';
-		im8 130,10;
+		im16 130,0,10;
 		umod 0,130;
 		//im8 0,  1;
 		call &%add2_u64%;
