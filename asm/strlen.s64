@@ -1,0 +1,19 @@
+
+
+libc_strlen:
+${(byte* string) -> u64: u64 len; byte c; byte zero;
+	im8 $len, 0;
+	im8 $zero, 0;
+	libc_strlen_looptop:
+		ild8 $c, $string; //load byte from string.
+		ucmp $+0!, $c, $zero; //compare c with zero
+		not $+0!; //was equals?
+		jnz $+0!, &%libc_strlen_loopend%; //go to the end
+		//increment len and string pointers
+		inc $len;
+		inc $string;
+		jmp &%libc_strlen_looptop%;
+
+	libc_strlen_loopend:
+	$return $len;
+$}
