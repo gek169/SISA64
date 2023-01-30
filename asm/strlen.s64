@@ -1,7 +1,11 @@
 
 
 libc_strlen:
-${(byte* string) -> u64: u64 len; byte c; byte zero;
+${(char* string) -> u64:	\//char*
+		u64 len; 			\//length of string.
+		char c; 			\//character fetched from string.
+		char zero;			\//dedicated register to hold zero.
+
 	im8 $len, 0;
 	im8 $zero, 0;
 	libc_strlen_looptop:
