@@ -13,6 +13,10 @@ install: all
 	cp s64as /usr/local/bin/
 	cp s64e /usr/local/bin/
 
+install_micro_syntax_file:
+	mkdir -p ~/.config/micro/syntax/
+	cp ./micro_syntax_highlight/s64.yaml ~/.config/micro/syntax/
+
 q: example
 	admin make install
 	make ap
