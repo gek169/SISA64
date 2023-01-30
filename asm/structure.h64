@@ -1,0 +1,19 @@
+
+//usage: [IF]{ASM_GEN_NAME}{expr}{regid}{code}
+.__IF:asm_arg1;not asm_arg2;jnz asm_arg2,q%asm_arg0_ifend%;asm_arg3;asm_label\asm_arg0_ifend;
+.__IFNOT:asm_arg1;jnz asm_arg2,q%asm_arg0_ifend%;asm_arg3;asm_label\asm_arg0_ifend;
+
+//						expr		regid	code
+//usage: [if]{expr}{regid}{code}
+.if:[__IF]{ASM_GEN_NAME}{asm_arg0}{asm_arg1}{asm_arg2}
+.ifn:[__IFNOT]{ASM_GEN_NAME}{asm_arg0}{asm_arg1}{asm_arg2}
+
+//usage: [WHILE]{ASM_GEN_NAME}{expr}{regid}{code}
+.__WHILE:asm_label\asm_arg0_whiletop;asm_arg1;not asm_arg2;jnz asm_arg2,q%asm_arg0_whileend%;asm_arg3;jmp q%asm_arg0_whiletop%;asm_label\asm_arg0_whileend;
+.__WHILENOT:asm_label\asm_arg0_whiletop;asm_arg1;jnz asm_arg2,q%asm_arg0_whileend%;asm_arg3;jmp q%asm_arg0_whiletop%;asm_label\asm_arg0_whileend;
+
+//usage: [while]{expr}{regid}{code}
+.while:[__WHILE]{ASM_GEN_NAME}{asm_arg0}{asm_arg1}{asm_arg2}
+.whilen:[__WHILENOT]{ASM_GEN_NAME}{asm_arg0}{asm_arg1}{asm_arg2}
+
+

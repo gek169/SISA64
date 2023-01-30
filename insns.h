@@ -1,6 +1,6 @@
 
 
-static const char* insn_names[90] = {
+static const char* insn_names[91] = {
 	"hlt",
 	"nop",
 	"become_user",
@@ -105,12 +105,14 @@ static const char* insn_names[90] = {
 	"bswap32",
 	"bswap16",
 	//conditional move
-	"mnz"
+	"mnz",
+	//jump if zero. Makes compares a bit easier.
+	"jiz"
 };
 
 
 //how many bytes of arguments does the instruction take?
-static const unsigned insn_nargs[90] = {
+static const unsigned insn_nargs[91] = {
 	//halt and nop,
 	0,
 	0,
@@ -185,12 +187,14 @@ static const unsigned insn_nargs[90] = {
 	//bswap
 	1,1,1,
 	//mnz takes 3 regids.
-	3
+	3,
+	//jiz needs a regid and a qword...
+	9
 	//dummy
 	//,0
 };
 
-static const char* insn_repl[90] = {
+static const char* insn_repl[91] = {
 	"bytes0;",
 	"bytes1;",
 	//become user has arguments
@@ -313,6 +317,7 @@ static const char* insn_repl[90] = {
 	"bytes86,",
 	"bytes87,",
 	"bytes88,",
-	"bytes89,"
+	"bytes89,",
+	"bytes90,"
 };
-static const unsigned n_insns = 90;
+static const unsigned n_insns = 91;

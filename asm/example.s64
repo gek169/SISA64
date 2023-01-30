@@ -1,5 +1,8 @@
 
-
+//this is meant to be compiled from the top level of the project...
+..include"asm/structure.h64"
+//this is how you do an include if you're compiling in the same directory as asm.
+//..include"structure.h64"
 
 im64 0, q%30000%
 setstp 0
@@ -23,15 +26,23 @@ $| //after this line ends, every line afterward is interpreted as a single logic
 		dwrite 26,0;
 	im8 25,'\n';
 	dwrite 26,25;
-	//grab our number for testing.	
+	//break out of the loop if the number is equal to 9.
+	[if]{
+		ild16 0,15;
+		im8 1, 10;
+		ucmp 0, 0, 1;
+		not 0;
+	}{0}{
+		jmp q%example_die%;
+	}
 	ild16	 0,15;
-	
 	jnz 0,q%looptop%;
+	
 	
 $|
 
-
-
+example_die:
+hlt;
 
 myVariable:
 	shorts 0

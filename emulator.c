@@ -165,7 +165,8 @@ void sisa64_emulate(){
 		&&J_BSWAP16,
 
 		&&J_MNZ,
-		&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,
+		&&J_JIZ,
+		&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,
 		&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,
 		&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,
 
@@ -810,6 +811,51 @@ void sisa64_emulate(){
 	}
 	DISPATCH();
 
+	/*Despite the strange positioning, this is actually opcode */
+	J_JIZ:;
+	{
+		uint64_t dest;
+		uint8_t regid;
+		uint8_t test;
+		regid = EAT_BYTE();
+		dest = EAT_QWORD();
+		test = (gpregs[regid] == 0);
+		
+		if(test)
+			pc = dest;
+		/*pc = (test * dest) | ((!test) * pc);*/
+	}
+	DISPATCH();
+
+	J_JGT:;
+	{
+		uint64_t dest;
+		uint8_t regid;
+		uint8_t test;
+		regid = EAT_BYTE();
+		dest = EAT_QWORD();
+		test = (gpregs[regid] == 1);
+		
+		if(test)
+			pc = dest;
+		/*pc = (test * dest) | ((!test) * pc);*/
+	}
+	DISPATCH();
+
+	J_JLT:;
+	{
+		uint64_t dest;
+		uint8_t regid;
+		uint8_t test;
+		regid = EAT_BYTE();
+		dest = EAT_QWORD();
+		test = ((int64_t)gpregs[regid] == (int64_t)-1);
+		
+		if(test)
+			pc = dest;
+		/*pc = (test * dest) | ((!test) * pc);*/
+	}
+	DISPATCH();
 
 
 	J_RET:;
