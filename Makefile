@@ -17,7 +17,7 @@ install_micro_syntax_file:
 	mkdir -p ~/.config/micro/syntax/
 	cp ./micro_syntax_highlight/s64.yaml ~/.config/micro/syntax/
 
-q: example
+q: example install_micro_syntax_file
 	admin make install
 	make ap
 

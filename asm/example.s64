@@ -4,45 +4,57 @@
 //this is how you do an include if you're compiling in the same directory as asm.
 //..include"structure.h64"
 
+
+
 im64 0, q%30000%
 setstp 0
-
 nop
-im64 15,&%myVariable%
-looptop:
 
-//demoing single logical line mode
-$| //after this line ends, every line afterward is interpreted as a single logical line.
-	ild16 0,15;
-	im8 1, 1;
-	iadd 0,1;
-	ist16 15,0;
-	//write out a character
-		im8 1, '0';
-		im16 130,0,10;
-		umod 0,130;
-		//im8 0,  1;
-		call &%add2_u64%;
-		dwrite 26,0;
-	im8 25,'\n';
-	dwrite 26,25;
-	//break out of the loop if the number is equal to 9.
-	[if]{
-		ild16 0,15;
-		im8 1, 10;
-		ucmp 0, 0, 1;
-		not 0;
-	}{0}{
-		jmp q%example_die%;
-	}
-	ild16	 0,15;
-	jnz 0,q%looptop%;
+//increment
+
+${(): u64 a; 			\//holds value of myvariable, usually
+	u64 zero;			\//
+	byte char_mod;		\//
+	byte char_zero;		\//holds zero.
+	byte char_newline;\//holds newline character.
+
 	
-	
+//initialize my variable to zero.
+im8 $zero, 0;
+st16 $zero, q%myVariable%;
+im8 $char_mod, 10;
+im8 $char_zero, '0';
+im8 $char_newline, '\n';
+
+//do an initial increment.
+ld16 $a, &%myVariable%;
+inc $a;
+st16 $a, &%myVariable%;
+
 $|
+
+[while]{
+	ld16 $a, &%myVariable%;
+	ucmp $+0!, $a, $zero;
+}{$+0!}{
+	//modulo a and add the value '0'
+	umod $a, $char_mod;
+	iadd $a, $char_zero;
+	//dwrite the result.
+	dwrite $zero, $a;
+	//write a newline.
+	dwrite $zero, $char_newline;
+	ld16 $a, &%myVariable%;
+	inc $a;
+	st16 $a, &%myVariable%;
+}
+$|
+
 
 example_die:
 hlt;
+
+$}
 
 myVariable:
 	shorts 0
