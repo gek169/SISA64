@@ -11,8 +11,7 @@ ${(char* string) -> u64:	\//char*
 	libc_strlen_looptop:
 		ild8 $c, $string; //load byte from string.
 		ucmp $+0!, $c, $zero; //compare c with zero
-		not $+0!; //was equals?
-		jnz $+0!, &%libc_strlen_loopend%; //go to the end
+		jiz $+0!, &%libc_strlen_loopend%; //go to the end if was equals (0)
 		//increment len and string pointers
 		inc $len;
 		inc $string;
