@@ -14,9 +14,10 @@ nop
 
 ${(): u64 a; 			\//holds value of myvariable, usually
 	u64 zero;			\//
-	byte char_mod;		\//
+	u8 char_mod;		\//
 	byte char_zero;		\//holds zero.
-	byte char_newline;\//holds newline character.
+	byte char_newline;	\//holds newline character.
+	u64	beyond_max_iter;		\//maximum iteration.
 
 	
 //initialize my variable to zero.
@@ -30,12 +31,16 @@ im8 $char_newline, '\n';
 ld16 $a, &%myVariable%;
 inc $a;
 st16 $a, &%myVariable%;
+im16 $beyond_max_iter, S%51%; //using signed short, for a change!
 
 $|
 
 [while]{
 	ld16 $a, &%myVariable%;
-	ucmp $+0!, $a, $zero;
+	ucmp $+0!, $a, $beyond_max_iter;
+	//for "not equals" we just do nothing...
+	//explicit
+	//bool $+0!;
 }{$+0!}{
 	//modulo a and add the value '0'
 	umod $a, $char_mod;

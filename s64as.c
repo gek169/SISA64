@@ -293,7 +293,7 @@ type parse_type(char* where, char** out){
 		where += 2;
 		basetype = 0;
 		goto after_basetype;
-	}	
+	}
 	if(strprefix("byte",where)){
 		where += 4;
 		basetype = 0;
