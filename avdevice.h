@@ -7,10 +7,10 @@
 #define SCREEN_HEIGHT 720
 
 #define AUDIO_MEM_SZ 0x10000000
-#define VIDEO_MEM_SZ (SCREEN_WIDTH * SCREEN_HEIGHT * 4 * 2)
+#define VIDEO_MEM_SZ (SCREEN_WIDTH * SCREEN_HEIGHT * 2)
 
 static uint8_t audiomemory[AUDIO_MEM_SZ] = {0};
-static uint8_t vmem[VIDEO_MEM_SZ] = {0}; /*two screens worth of video memory.*/
+static uint32_t vmem[VIDEO_MEM_SZ] = {0}; /*two screens worth of video memory.*/
 static int32_t audio_left = 0;
 
 static SDL_Window *sdl_win = NULL;
@@ -59,11 +59,14 @@ static void pollevents(){
 static void audio_mem_write(uint64_t addr, uint8_t val){
 	audiomemory[addr] = val;
 }
-static void vmem_write(uint64_t addr, uint8_t val){
-	vmem[addr] = val;
+/*Video memory is stored Big Endian. We want to get it to the processor in native endian.*/
+static void vmem_write(uint64_t addr, uint32_t val){
+	/*convert u32 to BE, write it...*/
+	vmem[addr] = u32_to_be(val);
 }
-static uint8_t vmem_read(uint64_t addr){
-	return vmem[addr];
+static uint32_t vmem_read(uint64_t addr){
+	/*convert BE32 to u32, read it....*/
+	return be_to_u32(vmem[addr]);
 }
 static void haltaudio(){audio_left = 0;}
 static void playaudio(uint32_t sz){
@@ -222,6 +225,7 @@ static uint64_t av_device_read(uint64_t addr){
 	if(addr == (BEGIN_CONTROLLER+6)) {return video_register_D;}
 	if(addr == (BEGIN_CONTROLLER + 100)) return pv();
 	if(addr == (BEGIN_CONTROLLER + 101)) read_gamer_buttons();
+	/*Read video memory.*/
 	if(addr >= BEGIN_VMEM && addr < (BEGIN_VMEM + VIDEO_MEM_SZ))
 		return vmem_read(addr - BEGIN_VMEM);
 
@@ -272,6 +276,7 @@ static void av_device_write(uint64_t addr, uint64_t val){
 	}
 	
 	if(addr >= BEGIN_VMEM && addr < (BEGIN_VMEM + VIDEO_MEM_SZ)){
+		/*video memory is addressed by the u32*/
 		vmem_write(addr - BEGIN_VMEM, val);
 		return;
 	}
