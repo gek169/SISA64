@@ -105,7 +105,7 @@ static void renderscreen(){
 		SDL_UpdateTexture(
 			sdl_tex,
 			NULL,
-			vmem, 
+			vmem,
 			(SCREEN_WIDTH) * 4
 		);
 		SDL_RenderCopy(
