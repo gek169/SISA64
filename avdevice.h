@@ -144,11 +144,11 @@ static void av_init(){
 	    SDL_GetCurrentDisplayMode(0, &DM);
 
 	    /*if(DM.w > 1000) display_scale = 2;*/
-		sdl_spec.freq = 16000;
+		sdl_spec.freq = 44100;
 		sdl_spec.format = AUDIO_S16MSB;
 		sdl_spec.channels = 1;
 		sdl_spec.silence = 0;
-		sdl_spec.samples = 2048;
+		sdl_spec.samples = 4096;
 		sdl_spec.callback = sdl_audio_callback;
 		sdl_spec.userdata = NULL;
 		sdl_win = SDL_CreateWindow("[SISA-64]",
