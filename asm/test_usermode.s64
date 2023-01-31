@@ -31,13 +31,15 @@
 	im8 50,0
 	dwrite 50, 0
 	im8 0, '\n'
+	
+spin:
 	dwrite 50,0
 	dwrite 50,0
 	dwrite 50,0
 	dwrite 50,0
-
-	//halt
 	hlt;
+jmp &%spin%
+	//halt
 
 
 
