@@ -7,7 +7,7 @@ s64as:
 	$(CC) $(OPTIMIZE) s64as.c -o s64as
 
 s64e:
-	$(CC) $(OPTIMIZE) device.c emulator.c emu_frontend.c -o s64e
+	$(CC) $(OPTIMIZE) device.c emulator.c emu_frontend.c -o s64e -lm -lSDL2
 
 install: all
 	cp s64as /usr/local/bin/
