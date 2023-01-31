@@ -331,5 +331,6 @@ static const char* insn_repl[93] = {
 	//jlt, jgt
 	"bytes91,",
 	"bytes92,"
+	//,""
 };
 static const unsigned n_insns = 93;
