@@ -222,7 +222,8 @@ static uint64_t av_device_read(uint64_t addr){
 	if(addr == (BEGIN_CONTROLLER+6)) {return video_register_D;}
 	if(addr == (BEGIN_CONTROLLER + 100)) return pv();
 	if(addr == (BEGIN_CONTROLLER + 101)) read_gamer_buttons();
-	if(addr >= BEGIN_VMEM && addr < (BEGIN_VMEM + VIDEO_MEM_SZ))	return vmem_read(addr - BEGIN_VMEM);
+	if(addr >= BEGIN_VMEM && addr < (BEGIN_VMEM + VIDEO_MEM_SZ))
+		return vmem_read(addr - BEGIN_VMEM);
 
 	return 0;
 }
