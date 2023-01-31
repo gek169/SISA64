@@ -6,7 +6,7 @@
 #define SCREEN_WIDTH 1280
 #define SCREEN_HEIGHT 720
 
-#define AUDIO_MEM_SZ 0x100000
+#define AUDIO_MEM_SZ 0x10000000
 #define VIDEO_MEM_SZ (SCREEN_WIDTH * SCREEN_HEIGHT * 4 * 2)
 
 static uint8_t audiomemory[AUDIO_MEM_SZ] = {0};
