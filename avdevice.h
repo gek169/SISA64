@@ -155,7 +155,7 @@ static void av_init(){
 			SDL_WINDOWPOS_UNDEFINED,
 			SDL_WINDOWPOS_UNDEFINED,
 			SCREEN_WIDTH * display_scale, 
-			SCREEN_WIDTH * display_scale,
+			SCREEN_HEIGHT * display_scale,
 			SDL_WINDOW_SHOWN
 		);
 		if(!sdl_win)
