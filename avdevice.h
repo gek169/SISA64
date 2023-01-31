@@ -206,7 +206,9 @@ static uint64_t av_device_read(uint64_t addr){
 	if(addr == 0) return 0x1ABC;
 	if(addr == 1) return 1;
 	if(addr == 2) return loc_vstring;
+	/*cannot be disabled*/
 	if(addr == 3) return 0;
+	/*not thread safe!*/
 	if(addr == 4) return 0;
 	/*Device implemented.*/
 	if( (addr >= loc_vstring) &&
@@ -220,7 +222,6 @@ static uint64_t av_device_read(uint64_t addr){
 	if(addr == (BEGIN_CONTROLLER+6)) {return video_register_D;}
 	if(addr == (BEGIN_CONTROLLER + 100)) return pv();
 	if(addr == (BEGIN_CONTROLLER + 101)) read_gamer_buttons();
-	
 	if(addr >= BEGIN_VMEM && addr < (BEGIN_VMEM + VIDEO_MEM_SZ))	return vmem_read(addr - BEGIN_VMEM);
 
 	return 0;
