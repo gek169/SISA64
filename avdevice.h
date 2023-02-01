@@ -291,6 +291,17 @@ static void av_device_write(uint64_t addr, uint64_t val){
 		screenmem = (uint32_t*) (sisa64_mem + val);
 		return;
 	}
+	/*Clear screen to ARGB value.*/
+	if(addr == (BEGIN_CONTROLLER + 13)){
+		uint32_t i;
+		uint32_t v = u32_to_be(val);
+		for(i = 0; i < SCREEN_WIDTH * SCREEN_HEIGHT; i++){
+			memcpy(screenmem + i, &v, 4);
+		}
+		return;
+	}
+
+	/*Memory read and write.*/
 	if(addr >= BEGIN_VMEM && addr < (BEGIN_VMEM + VIDEO_MEM_SZ)){
 		/*video memory is addressed by the u32*/
 		vmem_write(addr - BEGIN_VMEM, val);
