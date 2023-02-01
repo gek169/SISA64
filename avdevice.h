@@ -5,6 +5,7 @@
 
 #define SCREEN_WIDTH 1280
 #define SCREEN_HEIGHT 720
+#define AV_STDIN_BUF_SZ 0x10000
 
 #define AUDIO_MEM_SZ 0x10000000
 #define VIDEO_MEM_SZ (SCREEN_WIDTH * SCREEN_HEIGHT * 2)
@@ -22,6 +23,19 @@ static SDL_AudioSpec sdl_spec = {0};
 static const int32_t display_scale = 1;
 static uint8_t shouldquit = 0;
 
+static uint8_t av_stdin_buf[AV_STDIN_BUF_SZ];
+static long av_stdin_buf_len = 0;
+
+static void av_stdin_buf_push_char(uint8_t b){
+	if(av_stdin_buf_len >= AV_STDIN_BUF_SZ) return;
+	av_stdin_buf[av_stdin_buf_len++] = b;
+}
+
+static uint8_t av_stdin_buf_pop_char(){
+	if(av_stdin_buf_len == 0) return 0xff;
+	return av_stdin_buf[--av_stdin_buf_len];
+}
+
 static uint64_t video_register_A;
 static uint64_t video_register_B;
 static uint64_t video_register_C;
@@ -34,25 +48,25 @@ static void pollevents(){
 	while(SDL_PollEvent(&ev)){
 		if(ev.type == SDL_QUIT) shouldquit = 1; /*Magic value for quit.*/
 
-		/*
+		
 		else if(ev.type == SDL_TEXTINPUT){
-			char* b = ev.text.text;
+			uint8_t* b = (uint8_t*)(ev.text.text);
 			while(*b) {
-				stdin_buf_push_char(*b); b++;
+				av_stdin_buf_push_char(*b); 
+				b++;
 			}
 		}else if(ev.type == SDL_KEYDOWN){
 			switch(ev.key.keysym.scancode){
 				default: break;
-				case SDL_SCANCODE_DELETE: stdin_buf_push_char(0x7F); break;
-				case SDL_SCANCODE_BACKSPACE: stdin_buf_push_char(0x7F);break;
-				case SDL_SCANCODE_KP_BACKSPACE: stdin_buf_push_char(0x7F);break;
-				case SDL_SCANCODE_RETURN: stdin_buf_push_char(0xa);break;
-				case SDL_SCANCODE_RETURN2: stdin_buf_push_char(0xa);break;
-				case SDL_SCANCODE_KP_ENTER: stdin_buf_push_char(0xa);break;
-				case SDL_SCANCODE_ESCAPE: stdin_buf_push_char('\e');break;
+				case SDL_SCANCODE_DELETE: av_stdin_buf_push_char(0x7F); break;
+				case SDL_SCANCODE_BACKSPACE: av_stdin_buf_push_char(0x7F);break;
+				case SDL_SCANCODE_KP_BACKSPACE: av_stdin_buf_push_char(0x7F);break;
+				case SDL_SCANCODE_RETURN: av_stdin_buf_push_char(0xa);break;
+				case SDL_SCANCODE_RETURN2: av_stdin_buf_push_char(0xa);break;
+				case SDL_SCANCODE_KP_ENTER: av_stdin_buf_push_char(0xa);break;
+				case SDL_SCANCODE_ESCAPE: av_stdin_buf_push_char('\e');break;
 			}
 		}
-		*/
 	}
 }
 
@@ -141,6 +155,7 @@ static void sdl_audio_callback(void *udata, Uint8 *stream, int len){
 static void av_init(){
 		SDL_DisplayMode DM;
 		screenmem = vmem;
+		av_stdin_buf_len = 0;
 	    if(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) < 0)
 	    {
 	        printf("SDL2 could not be initialized!\n"
@@ -151,7 +166,7 @@ static void av_init(){
 
 	    /*if(DM.w > 1000) display_scale = 2;*/
 		sdl_spec.freq = 44100;
-		sdl_spec.format = AUDIO_S16MSB;
+		sdl_spec.format = AUDIO_S16MSB; /*Big Endian*/
 		sdl_spec.channels = 1;
 		sdl_spec.silence = 0;
 		sdl_spec.samples = 4096;
@@ -191,7 +206,7 @@ static void av_init(){
 		  exit(-1);
 		}
 		SDL_PauseAudio(0);
-		/*SDL_StartTextInput();*/
+		SDL_StartTextInput();
 }
 
 
@@ -227,7 +242,9 @@ static uint64_t av_device_read(uint64_t addr){
 	if(addr == (BEGIN_CONTROLLER+5)) {return video_register_C;}
 	if(addr == (BEGIN_CONTROLLER+6)) {return video_register_D;}
 	if(addr == (BEGIN_CONTROLLER + 100)) return pv();
-	if(addr == (BEGIN_CONTROLLER + 101)) read_gamer_buttons();
+	if(addr == (BEGIN_CONTROLLER + 101)) return read_gamer_buttons();
+	/*102 is the stdin buf. 103 is to clear/flush the stdin buf.*/
+	if(addr == (BEGIN_CONTROLLER + 102)) return av_stdin_buf_pop_char();
 	/*Read video memory.*/
 	if(addr >= BEGIN_VMEM && addr < (BEGIN_VMEM + VIDEO_MEM_SZ))
 		return vmem_read(addr - BEGIN_VMEM);
@@ -300,7 +317,15 @@ static void av_device_write(uint64_t addr, uint64_t val){
 		}
 		return;
 	}
-
+	if(addr == (BEGIN_CONTROLLER + 102)){
+		av_stdin_buf_push_char(val);
+		return;
+	}
+	/*flush the av stdin buffer.*/
+	if(addr == (BEGIN_CONTROLLER + 103)){
+		av_stdin_buf_len = 0;
+		return;
+	}
 	/*Memory read and write.*/
 	if(addr >= BEGIN_VMEM && addr < (BEGIN_VMEM + VIDEO_MEM_SZ)){
 		/*video memory is addressed by the u32*/
