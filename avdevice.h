@@ -11,6 +11,8 @@
 
 static uint8_t audiomemory[AUDIO_MEM_SZ] = {0};
 static uint32_t vmem[VIDEO_MEM_SZ] = {0}; /*two screens worth of video memory.*/
+static uint32_t* screenmem;
+
 static int32_t audio_left = 0;
 
 static SDL_Window *sdl_win = NULL;
@@ -108,7 +110,7 @@ static void renderscreen(){
 		SDL_UpdateTexture(
 			sdl_tex,
 			NULL,
-			vmem,
+			screenmem,
 			(SCREEN_WIDTH) * 4
 		);
 		SDL_RenderCopy(
@@ -138,6 +140,7 @@ static void sdl_audio_callback(void *udata, Uint8 *stream, int len){
 
 static void av_init(){
 		SDL_DisplayMode DM;
+		screenmem = vmem;
 	    if(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) < 0)
 	    {
 	        printf("SDL2 could not be initialized!\n"
@@ -249,6 +252,7 @@ static void av_device_write(uint64_t addr, uint64_t val){
 			sisa64_mem + video_register_B,
 			video_register_C
 		);
+		return;
 	}
 	/*Hardware DMA, ram to ram*/
 	if(addr == (BEGIN_CONTROLLER+8)) {
@@ -257,6 +261,7 @@ static void av_device_write(uint64_t addr, uint64_t val){
 			sisa64_mem + video_register_B,
 			video_register_C
 		);
+		return;
 	}	
 	/*Hardware DMA, vmem to vmem*/
 	if(addr == (BEGIN_CONTROLLER+9)) {
@@ -265,6 +270,7 @@ static void av_device_write(uint64_t addr, uint64_t val){
 			vmem + video_register_B,
 			video_register_C
 		);
+		return;
 	}
 	/*Hardware DMA, vmem to ram*/
 	if(addr == (BEGIN_CONTROLLER+10)) {
@@ -273,8 +279,18 @@ static void av_device_write(uint64_t addr, uint64_t val){
 			vmem + video_register_B,
 			video_register_C
 		);
+		return;
 	}
-	
+	/*Assign screenmem to offset in video memory.*/
+	if(addr == (BEGIN_CONTROLLER+11)){
+		screenmem = vmem + val;
+		return;
+	}
+	/*Assign screen memory to somewhere in main memory*/
+	if(addr == (BEGIN_CONTROLLER+12)){
+		screenmem = (uint32_t*) (sisa64_mem + val);
+		return;
+	}
 	if(addr >= BEGIN_VMEM && addr < (BEGIN_VMEM + VIDEO_MEM_SZ)){
 		/*video memory is addressed by the u32*/
 		vmem_write(addr - BEGIN_VMEM, val);
