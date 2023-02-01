@@ -1,4 +1,6 @@
 
+//include guard this file.
+ASM_GUARD STRLEN_H64
 
 libc_strlen:
 ${(char* string) -> u64:	\//char*

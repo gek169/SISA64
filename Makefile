@@ -50,4 +50,7 @@ test_usermode: all
 
 rxincrmark: all
 	./s64as -i asm/rxincrmark.s64 -o rxincrmark.bin
+	#time ./s64e rxincrmark.bin
+
+bench_rxincr: rxincrmark
 	time ./s64e rxincrmark.bin

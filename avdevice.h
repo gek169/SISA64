@@ -188,7 +188,7 @@ static void av_init(){
 		  exit(-1);
 		}
 		SDL_PauseAudio(0);
-		SDL_StartTextInput();
+		/*SDL_StartTextInput();*/
 }
 
 

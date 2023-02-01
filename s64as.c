@@ -129,11 +129,77 @@ static char* read_line_from_file(FILE* f, unsigned long* lenout, char terminator
 #ifndef SISA64_MAX_MACROS
 #define SISA64_MAX_MACROS 0x10000
 #endif
+
+#ifndef SISA64_MAX_GUARDS
+#define SISA64_MAX_GUARDS 0x400
+#endif
+
 static char* variable_names[SISA64_MAX_MACROS] = {0};
+static char* guards[SISA64_MAX_GUARDS] = {0};
+static unsigned long nguards = 0;
 static char* variable_expansions[SISA64_MAX_MACROS] = {0};
 static char variable_is_redefining_flag[SISA64_MAX_MACROS] = {0};
 static const unsigned long max_lines_disassembler = 0x1ffFFff;
-static unsigned long nmacros;
+static unsigned long nmacros = 0;
+static unsigned char is_guarded = 0;
+
+static int reset_guards(){
+	unsigned long i;
+	for(i = 0; i < nguards; i++){
+		if(guards[i]) free(guards[i]);
+		guards[i] = NULL;
+	}
+	return 1;
+}
+
+
+static void remove_trailing_whitespace(){
+	unsigned long len;
+	len = strlen(line);
+	while(1){
+		if(len == 0) return;
+		if(isspace(line[len-1])) {
+			line[len-1] = '\0';
+			len--;
+			continue;
+		}
+		break;
+	}
+}
+
+
+/*ASM_GUARD*/
+static void decl_guard(){
+	char* name;
+	remove_trailing_whitespace();
+	name = (line + strlen("ASM_GUARD"));
+	while(isspace(*name))name++;
+	name = strdup(name);
+	if(!name){
+		puts("Malloc Failed.");
+	}
+	if(nguards >= SISA64_MAX_GUARDS){
+		puts(general_fail_pref);
+		puts("Implementation limit on include guards has been reached.");
+		exit(1);
+	}
+	guards[nguards++] = name;
+}
+
+
+int guard_is_used(){
+	unsigned long i;
+	char* name;
+	remove_trailing_whitespace();
+	name = (line + strlen("ASM_GUARD"));
+	while(isspace(*name))name++;
+	for(i = 0; i < nguards; i++){
+		if(streq(guards[i], name)){
+			return 1;
+		}
+	}
+	return 0;
+}
 
 
 static char int_checker(char* proc){
@@ -1969,19 +2035,18 @@ static void do_macro_expansion(){
 						}
 
 						//verify integrity of the scanned number.
-						if(split_type < 8) /*Not a float!*/
+						if(split_uval == 0)
+						if(npasses == 1)
 						if(
-							split_uval == 0  && 
-							npasses == 1 && 
-							line[loc+2] != '%' && 
-							!misdigit(line[loc+2])
+							!misdigit(line[loc+1])
 						)
 						{
-							puts(warn_pref);
+							puts(syntax_fail_pref);
 							puts("Unusual Split (%%) evaluates to zero. Line:");
 							puts(line_copy);
 							puts("Line internally:");
 							puts(line);
+							exit(1);
 						}
 
 						//based on split type, write out a comma
@@ -3108,16 +3173,20 @@ int main(int argc, char** argv){
 		 	(outputcounter=0),
 		 	(label_generator = 0),
 		 	(label_offset = 0),
-		 	(scope_is_active = 0)
+		 	(scope_is_active = 0),
+		 	(nguards = 0),
+		 	(is_guarded = 0)
 		)
 		{/*For loop, 2 passes*/
 		while(1){ /*While loop fetching lines*/
 			was_macro = 0;	/*Is this a VAR line or one of its syntactic variants?*/
 			using_asciz = 0; /*Is this a string literal line which requires writing a zero at the end?*/
 			if(feof(infile)){
-				/*try popping from the fstack*/
+				/*single logical line mode has definitely ended...*/
 				single_logical_line_mode = 0;
-				
+				/*Disable is_guarded.*/
+				is_guarded = 0;
+				/*pop from the fstack*/
 				if(include_level > 0){
 					fclose(infile); infile = NULL;
 					include_level -= 1;
@@ -3160,7 +3229,7 @@ int main(int argc, char** argv){
 	
 				/*if this line ends in a backslash...*/
 				if(
-					!feof(infile) 
+					!feof(infile)
 					&& strlen((char*)line) > 0 
 					&& !strprefix("!",(char*)line) 
 					&& line[strlen((char*)line)-1] == '\\'
@@ -3177,12 +3246,13 @@ int main(int argc, char** argv){
 	
 				/*END_OF_LINE_FETCH_STAGE*/
 			}
-	
-	
-	
-	
-	
-	
+
+
+
+
+
+			
+			if(is_guarded) goto end;
 			/*handle comments...*/
 			if(strprefix("#!",(char*)line)) goto end;
 
@@ -3202,6 +3272,14 @@ int main(int argc, char** argv){
 			if(strprefix("..zero:", (char*)line)){
 				handle_dotdotzero();
 				goto end_of_syntax_sugar_eval;
+			}
+			if(strprefix("ASM_GUARD", line)){
+				if(guard_is_used()){
+					is_guarded = 1;
+					goto end;
+				}
+				decl_guard();
+				goto end;
 			}
 	
 			if(strprefix("..z:", (char*)line)){

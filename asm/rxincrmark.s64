@@ -1,24 +1,32 @@
 
-nop
+..include"asm/structure.h64"
+jmp q%16%
+
+section 16;
 looptop:
 
 	//call q% do_nothing%
+	//im8 200, 0;
+	//im8 201, 'p';
+	//dwrite 200,201;
 	
 	ld32 0, q%myVariable%
 	mov 5,0
 	inc 0
 	st32 0, q%myVariable%
-
 	jnz 5, q%looptop%
+hlt;
 
-
-
-
-myVariable:
+:myVariable:
 	longs 1
 	shorts 0xAABB
-..asciz:Hello World!
 
 do_nothing:ret;
+
+..include"asm/strlen.h64"
+..include"asm/strlen.h64"
+..asciz:Hello World!
+
+
 
 
