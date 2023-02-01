@@ -1,6 +1,8 @@
 /*
 	Program written for the GNU99 dialect of C99
-	to assemble 
+	to assemble S-ISA-64 assembly language.
+
+	Primarily for use in the emulator.
 */
 
 #include "stringutil.h"
