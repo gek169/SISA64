@@ -12,14 +12,13 @@ nop
 
 //increment
 
-${(): u64 a; 			\//holds value of myvariable, usually
-	u64 zero;			\//
-	u8 char_mod;		\//
-	byte char_zero;		\//holds zero.
-	byte char_newline;	\//holds newline character.
-	u64	beyond_max_iter;		\//maximum iteration.
-
-	
+${(): 
+$var u64 a;
+$var u64 zero;
+$var u8 char_mod;
+$var byte char_zero;
+$var byte char_newline;
+$var u64 beyond_max_iter;
 //initialize my variable to zero.
 im8 $zero, 0;
 st16 $zero, q%myVariable%;

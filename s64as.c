@@ -635,6 +635,13 @@ void parse_vardecl(char* where, char** out){
 			puts(line_copy);
 			exit(1);
 		}
+		if(streq("var",where)){
+			puts(syntax_fail_pref);
+			puts("You may not name a variable 'var'.");
+			puts("Line:");
+			puts(line_copy);
+			exit(1);
+		}
 		/*check for duplicate identifiers.*/
 		for(x = 0; x < scope_nvars;x++)
 			if(streq(scopevars[x].name, where)){
@@ -795,6 +802,7 @@ static unsigned long handle_dollar_normal(char* loc_in, char recursed){
 	char saved_character;
 	long len = 0;
 	char* loc_name = loc_in+1;
+	char* locend = 0;
 	long loc_eparen;
 	unsigned long i;
 	long len_to_replace;
@@ -802,10 +810,17 @@ static unsigned long handle_dollar_normal(char* loc_in, char recursed){
 /*	if(loc_name[0] == '|'){
 		return 2;
 	}*/
-	if(!recursed)
+	if(!recursed){
 		if(strprefix("return",loc_name))
-			if(!(isalnum(loc_name[6]) ||	 loc_name[6] == '_') )
-			{
+		if(!(isalnum(loc_name[6]) ||	 loc_name[6] == '_') )
+		{
+				if(!scope_is_active){
+					puts(syntax_fail_pref);
+					puts("$return outside of scope.");
+					puts("Line:");
+					puts(line_copy);
+					exit(1);
+				}
 				/*return statement.*/
 				len = 1;
 				loc_name += 6; /*we have to eat the return.*/
@@ -858,6 +873,9 @@ static unsigned long handle_dollar_normal(char* loc_in, char recursed){
 				if(!misdigit(loc_name[0])){
 					puts(syntax_fail_pref);
 					puts("Return value takes a register id. Either use a $variable_name, $+13! or an integer literal.");
+					puts("Line:");
+					puts(line_copy);
+					exit(1);
 				}
 				val = matou(loc_name);
 				if(val == 0){ /*OPTIMIZATION! don't move a register into itself!*/
@@ -868,10 +886,55 @@ static unsigned long handle_dollar_normal(char* loc_in, char recursed){
 				mutoa(buf2 + strlen(buf2),val);
 				strcat(buf2, ";ret");
 				return len + loc_eparen; /*We want to leave the semicolon.*/
-			}
+		}
+		if(strprefix("var",loc_name))
+		if(!(isalnum(loc_name[3]) ||	 loc_name[3] == '_') ){
+				len = 1;
+				loc_name += 3; /*we have to eat the name.*/
+				len += 3;
+				loc_eparen = strfind(loc_name, ";");
+				if(loc_eparen == -1){
+					fail_dollar_var_needs_semicolon_terminating:;
+					puts(syntax_fail_pref);
+					puts("Delayed variable declaration requires a semicolon terminating.");
+					puts("Line:");
+					puts(line_copy);
+					exit(1);
+				}
+				if(!scope_is_active){
+					puts(syntax_fail_pref);
+					puts("$var outside of scope.");
+					puts("Line:");
+					puts(line_copy);
+					exit(1);
+				}
+				if(!isspace(loc_name[0])){
+					puts(syntax_fail_pref);
+					puts("Delayed Variable Declaration requires whitespace after \"var\" ");
+					puts("Line:");
+					puts(line_copy);
+					exit(1);
+				}
+				parse_vardecl(loc_name, &locend);
+				
+				while(isspace(*locend))locend++;
+				if(*locend != ';'){
+					goto fail_dollar_var_needs_semicolon_terminating;
+				}
+				buf2[0] = '\0'; /*we want to do nothing.*/
+				return len + loc_eparen;
+		}
+	}
 	if( (isalnum(loc_name[0])) || loc_name[0] == '_')
 	{
 		len = 0;
+		if(!scope_is_active){
+			puts(syntax_fail_pref);
+			puts("$X outside of scope.");
+			puts("Line:");
+			puts(line_copy);
+			exit(1);
+		}
 		while(1){
 			if((!isalnum(loc_name[len])) && (loc_name[len] != '_') ){
 				break;
@@ -908,6 +971,13 @@ static unsigned long handle_dollar_normal(char* loc_in, char recursed){
 
 	if(loc_name[0] == '+'){
 		len = 0;
+		if(!scope_is_active){
+			puts(syntax_fail_pref);
+			puts("$+! outside of scope.");
+			puts("Line:");
+			puts(line_copy);
+			exit(1);
+		}
 		loc_eparen = strfind(loc_name, "!");
 		if(loc_eparen == -1){
 			puts(syntax_fail_pref);
