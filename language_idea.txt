@@ -58,7 +58,8 @@ fn do_an_operation(i32 a, i32 b, byte c)->u64:
 		temp = a * b;
 	end
 	if(c == 3) temp = a / b; end
-	if(c > 3)
+	if(c == 4) temp = a % b; end //imod
+	if(c > 4)
 		return do_an_operation(a,b,c-1);
 	end
 	return temp;
@@ -70,8 +71,9 @@ fn strlen(byte* c)->u64:
 	//local variable declaration statement.
 	u64 len;
 	len = 0;
-	for(;c[0] != 0;c++)
+	while(c[0] != 0)
 		len++;
+		c++;
 	end
 	return len;
 end
