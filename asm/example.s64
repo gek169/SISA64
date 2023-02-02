@@ -62,11 +62,12 @@ $}
 myVariable:
 	shorts 0
 
-
+$gvar short* myGlobal; asm_print;
 //testing $ syntax...
 add2_u64:
-${(int a, int b) -> u64   : \
-		qword return_value;
+${(int a, int b) -> u64   :
+
+	$var qword return_value;
 
 	mov $return_value, $a;
 	iadd $return_value, $b; asm_print;

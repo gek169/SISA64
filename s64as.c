@@ -282,7 +282,6 @@ static void putqword(uint64_t sh){
 	fputbyte(sh/0x1000000000000);
 	fputbyte(sh/0x10000000000);
 	fputbyte(sh/0x100000000);
-
 	fputbyte(sh/0x1000000);
 	fputbyte(sh/0x10000);
 	fputbyte(sh/0x100);
@@ -320,83 +319,103 @@ enum{
 	TYPE_I64=8,
 
 	TYPE_F64=9,
-	TYPE_STRUCT=10
+	TYPE_STRUCT=10,
+	TYPE_VOID=11
 };
 
 #define SCOPE_MAX_VARNAME_LEN 127
+#define SCOPE_MAX_GLOBALS 65536
+#define SCOPE_MAX_DEPTH 65536
 
 typedef struct{
 	uint64_t basetype;
 	uint64_t ptrlevel;
+	uint64_t arraylen;
 	uint8_t is_lvalue;
 	uint64_t structid;
 } type;
 
 typedef struct{
 	char name[SCOPE_MAX_VARNAME_LEN + 1];
+	char is_stack_allocated; /*For local variables only: Does it use the stack?*/
+	char is_static_allocated; /*For global variables: always one.*/
+	unsigned long depth; /*depth?*/
 	type t;	
 } scopevar;
 
 unsigned int scope_is_active = 0;
+unsigned long scope_depth = 0;
+char scope_variables_must_fit_into_register = 0; /*Used for arguments.*/
 scopevar scopevars[SCOPE_MAX_VARS];
+scopevar gvars[SCOPE_MAX_GLOBALS];
 type scope_retval_type = {0};
 char scope_has_retval = 0;
 unsigned int scope_nvars = 0;
+unsigned int scope_gvars = 0;
 
 uint64_t type_get_ptrlvl(type t){
 	return t.ptrlevel;
 }
 
+
+
 int type_is_ptr(type t){
 	return type_get_ptrlvl(t) != 0;
+}
+
+char type_is_primitive(type t){
+	if(t.arraylen) return 0; /*Arrays are never in a register.*/
+	if(t.ptrlevel) return 1; /*all pointers can fit into registers.*/
+	if(t.basetype < 10) return 1; /*u8 - double can fit into registers, which are 0 - 9*/
+	return 0; /*Invalid!*/
 }
 
 type parse_type(char* where, char** out){
 	uint64_t basetype = 7;
 	uint64_t ptrlevel = 0;
-	type t;
+	type t = {0};
 	while(isspace(*where))where++;
 
 	if(strprefix("u8",where)){
 		where += 2;
-		basetype = 0;
+		basetype = TYPE_U8;
 		goto after_basetype;
 	}
 	if(strprefix("byte",where)){
 		where += 4;
-		basetype = 0;
+		basetype = TYPE_U8;
 		goto after_basetype;
 	}
 	if(strprefix("char",where)){
 		where += 4;
-		basetype = 0;
+		basetype = TYPE_U8;
 		goto after_basetype;
 	}	
 	if(strprefix("uchar",where)){
 		where += 5;
-		basetype = 0;
+		basetype = TYPE_U8;
 		goto after_basetype;
-	}	
+	}
 	if(strprefix("ubyte",where)){
 		where += 5;
-		basetype = 0;
+		basetype = TYPE_U8;
 		goto after_basetype;
 	}	
 
 
 	if(strprefix("i8",where)){
 		where += 2;
-		basetype = 1;
+		basetype = TYPE_I8;
 		goto after_basetype;
 	}
 	if(strprefix("sbyte",where)){
 		where += 5;
-		basetype = 1;
+		basetype = TYPE_I8;
 		goto after_basetype;
 	}	
 	if(strprefix("schar",where)){
 		where += 5;
-		basetype = 1;
+		basetype = TYPE_I8;
 		goto after_basetype;
 	}	
 
@@ -404,72 +423,72 @@ type parse_type(char* where, char** out){
 
 	if(strprefix("u16",where)){
 		where += 3;
-		basetype = 2;
+		basetype = TYPE_U16;
 		goto after_basetype;
 	}	
 	if(strprefix("ushort",where)){
 		where += 6;
-		basetype = 2;
+		basetype = TYPE_U16;
 		goto after_basetype;
 	}	
 
 
 	if(strprefix("i16",where)){
 		where += 3;
-		basetype = 3;
+		basetype = TYPE_I16;
 		goto after_basetype;
 	}	
 	if(strprefix("short",where)){
 		where += 5;
-		basetype = 3;
+		basetype = TYPE_I16;
 		goto after_basetype;
 	}	
 	if(strprefix("sshort",where)){
 		where += 6;
-		basetype = 3;
+		basetype = TYPE_I16;
 		goto after_basetype;
 	}	
 
 
 	if(strprefix("u32",where)){
 		where += 3;
-		basetype = 4;
+		basetype = TYPE_U32;
 		goto after_basetype;
 	}	
 	if(strprefix("uint",where)){
 		where += 4;
-		basetype = 4;
+		basetype = TYPE_U32;
 		goto after_basetype;
 	}	
 	if(strprefix("ulong",where)){
 		where += 5;
-		basetype = 4;
+		basetype = TYPE_U32;
 		goto after_basetype;
 	}
 	if(strprefix("unsigned",where)){
 		where += 8;
-		basetype = 4;
+		basetype = TYPE_U32;
 		goto after_basetype;
 	}
 
 	if(strprefix("i32",where)){
 		where += 3;
-		basetype = 5;
+		basetype = TYPE_I32;
 		goto after_basetype;
 	}	
 	if(strprefix("int",where)){
 		where += 3;
-		basetype = 5;
+		basetype = TYPE_I32;
 		goto after_basetype;
 	}	
 	if(strprefix("long",where)){
 		where += 4;
-		basetype = 5;
+		basetype = TYPE_I32;
 		goto after_basetype;
 	}
 	if(strprefix("signed",where)){
 		where += 6;
-		basetype = 5;
+		basetype = TYPE_I32;
 		goto after_basetype;
 	}
 
@@ -477,22 +496,22 @@ type parse_type(char* where, char** out){
 	
 	if(strprefix("u64",where)){
 		where += 3;
-		basetype = 7;
+		basetype = TYPE_U64;
 		goto after_basetype;
 	}		
 	if(strprefix("qword",where)){
 		where += 5;
-		basetype = 7;
+		basetype = TYPE_U64;
 		goto after_basetype;
 	}
 	if(strprefix("uqword",where)){
 		where += 6;
-		basetype = 7;
+		basetype = TYPE_U64;
 		goto after_basetype;
 	}
 	if(strprefix("ullong",where)){
 		where += 6;
-		basetype = 7;
+		basetype = TYPE_U64;
 		goto after_basetype;
 	}
 
@@ -500,22 +519,22 @@ type parse_type(char* where, char** out){
 	
 	if(strprefix("i64",where)){
 		where += 3;
-		basetype = 8;
+		basetype = TYPE_I64;
 		goto after_basetype;
 	}		
 	if(strprefix("sqword",where)){
 		where += 6;
-		basetype = 8;
+		basetype = TYPE_I64;
 		goto after_basetype;
 	}
 	if(strprefix("llong",where)){
 		where += 5;
-		basetype = 8;
+		basetype = TYPE_I64;
 		goto after_basetype;
 	}
 	if(strprefix("sllong",where)){
 		where += 6;
-		basetype = 8;
+		basetype = TYPE_I64;
 		goto after_basetype;
 	}
 
@@ -523,22 +542,27 @@ type parse_type(char* where, char** out){
 	//floating point types.
 	if(strprefix("float",where)){
 		where += 5;
-		basetype = 6;
+		basetype = TYPE_F32;
 		goto after_basetype;
 	}	
 	if(strprefix("f32",where)){
 		where += 3;
-		basetype = 6;
+		basetype = TYPE_F32;
 		goto after_basetype;
 	}
 	if(strprefix("f64",where)){
 		where += 3;
-		basetype = 9;
+		basetype = TYPE_F64;
 		goto after_basetype;
 	}
 	if(strprefix("double",where)){
 		where += 6;
-		basetype = 9;
+		basetype = TYPE_F64;
+		goto after_basetype;
+	}
+	if(strprefix("void",where)){
+		where += 4;
+		basetype = TYPE_VOID;
 		goto after_basetype;
 	}
 
@@ -554,6 +578,7 @@ type parse_type(char* where, char** out){
 		ptrlevel++;
 		where++;
 	}
+	/*TODO: Parse arrays*/
 
 	t.basetype = basetype;
 	t.is_lvalue = 1;
@@ -565,15 +590,50 @@ type parse_type(char* where, char** out){
 }
 
 
+static uint64_t type_getsz(type t){
+	if(t.arraylen){
+		type q = t;
+		q.arraylen = 0;
+		return t.arraylen * type_getsz(q);
+	}
+	if(type_is_ptr(t)) return 8;
+	if(t.basetype == TYPE_U8 || t.basetype == TYPE_I8) return 1;
+	if(t.basetype == TYPE_U16 || t.basetype == TYPE_I16) return 2;
+	if(t.basetype == TYPE_U32 || t.basetype == TYPE_I32|| t.basetype == TYPE_F32) return 4;
+	if(t.basetype == TYPE_U64 || t.basetype == TYPE_I64|| t.basetype == TYPE_F64) return 8;
+	if(t.basetype == TYPE_VOID) return 0; /*void. */
+	if(t.basetype == TYPE_STRUCT){
+		/*TODO*/
+		puts(internal_fail_pref);
+		puts("Getting the size of a struct type is currently unimplemented.");
+		puts("Line:");
+		puts(line_copy);
+		exit(1);
+	}
+	/*
+		TODO: 
+	*/
+
+	puts(internal_fail_pref);
+	puts("Tried to get the size of an unknown type!");
+	puts("Line:");
+	puts(line_copy);
+	exit(1);
+}
+
+
 void parse_vardecl(char* where, char** out){
 	type t;
 	unsigned long len;
 	char saved_character;
 	scopevar* setme;
 	unsigned long x; /*loop counter variable for checking matching identifiers.*/
-
+	unsigned long size_of_type = 0;
+	char t_is_primitive;
 	setme = scopevars + scope_nvars;
-
+	setme->is_static_allocated = 0;
+	setme->is_stack_allocated = 0; /*Default.*/
+	setme->depth = 0; /*SAVED! for future use.*/
 	if(scope_nvars == SCOPE_MAX_VARS){
 		puts(general_fail_pref);
 		puts("Too many scope variables are declared.");
@@ -583,6 +643,17 @@ void parse_vardecl(char* where, char** out){
 
 	while(isspace(*where))where++;
 	t = parse_type(where, &where);
+	t_is_primitive = type_is_primitive(t);
+	if(scope_variables_must_fit_into_register){
+		if(!t_is_primitive){
+			puts(syntax_fail_pref);
+			puts("Function Arguments may not be arrays or structs. They may be pointers or primitives.");
+			puts("Line:");
+			puts(line_copy);
+			exit(1);
+		}
+	}
+	size_of_type = type_getsz(t);
 	/*Require at least one space...*/
 	if(!isspace(*where)){
 		puts(syntax_fail_pref);
@@ -652,10 +723,141 @@ void parse_vardecl(char* where, char** out){
 				puts(line_copy);
 				exit(1);
 			}
+
+	/*CODE GENERATION! Allocate space on the stack.*/
+	if(!t_is_primitive){
+		strcat(buf3, "im64 $+0!, q%");
+		mutoa(buf3 + strlen(buf3), size_of_type);
+		strcat(buf3, "%;");
+		/*Assign the pointer...*/
+		strcat(buf3, "getstp $");
+		strcat(buf3, setme->name);
+		strcat(buf3, ";");
+		strcat(buf3, "getstp $+1!;iadd $+0!,$+1!;setstp $+0!;");
+		setme->is_stack_allocated = 1;
+	}
 	mstrcpy(setme->name, where);
 	where[len] = saved_character;
 	scope_nvars++;
 	setme->t = t;
+	/*Skip the identifier...*/
+	where += len;
+	if(out)
+		*out = where;
+	return;
+}
+
+/*appends appropriate code generation to buf2.*/
+void parse_gvardecl(char* where, char** out){
+	type t;
+	unsigned long len;
+	unsigned long i; /*loop counter*/
+	char saved_character;
+	scopevar* setme;
+	unsigned long x; /*loop counter variable for checking matching identifiers.*/
+	unsigned long size_of_type = 0;
+	setme = gvars + scope_gvars;
+	setme->is_stack_allocated = 0;
+	setme->is_static_allocated = 1; /*They are always pointers!*/
+	setme->depth = 0; /*irrelevant.*/
+	
+	if(scope_gvars == SCOPE_MAX_VARS){
+		puts(general_fail_pref);
+		puts("Too many global variables are declared.");
+		puts("Line:");
+		puts(line_copy);
+	}
+
+	while(isspace(*where))where++;
+	t = parse_type(where, &where);
+	size_of_type = type_getsz(t);
+	/*Require at least one space...*/
+	if(!isspace(*where)){
+		puts(syntax_fail_pref);
+		puts("Expected space character during variable declaration parsing.");
+		puts("Line:");
+		puts(line_copy);
+		exit(1);
+	}
+	while(isspace(*where))where++;
+	/*walk the string until we hit a non-identifier character.*/
+	for(len = 0;
+		where[len]!='\0';
+		len++
+	){
+		if(isalnum(where[len]) || where[len] == '_') continue;
+		break;
+	}
+	if(len == 0){
+		puts(syntax_fail_pref);
+		puts("Invalid Global Variable Identifier.");
+		puts("Line:");
+		puts(line_copy);
+		exit(1);
+	}
+	if(len > SCOPE_MAX_VARNAME_LEN){
+		puts(syntax_fail_pref);
+		puts("Variable name has too many characters:");
+		saved_character = where[len];
+			where[len] = '\0';
+			puts(where);
+		where[len] = saved_character;
+		puts("Line:");
+		puts(line_copy);
+		exit(1);
+	}
+
+	if(isdigit(where[0])){
+		puts(syntax_fail_pref);
+		puts("No local variables may start with a number.");
+		puts("Line:");
+		puts(line_copy);
+		exit(1);
+	}
+	/*write the variables name and type to scopevars.*/
+	saved_character = where[len];
+		where[len] = '\0';
+		if(streq("return",where)){
+			puts(syntax_fail_pref);
+			puts("You may not name a variable 'return'.");
+			puts("Line:");
+			puts(line_copy);
+			exit(1);
+		}
+		if(streq("var",where)){
+			puts(syntax_fail_pref);
+			puts("You may not name a variable 'var'.");
+			puts("Line:");
+			puts(line_copy);
+			exit(1);
+		}
+		/*check for duplicate identifiers.*/
+		for(x = 0; x < scope_gvars;x++)
+			if(streq(gvars[x].name, where)){
+				puts("Duplicate global identifier declared.");
+				puts("Identifier:");
+				puts(where);
+				puts("Line:");
+				puts(line_copy);
+				exit(1);
+			}
+	mstrcpy(setme->name, where);
+	where[len] = saved_character;
+	scope_gvars++;
+	setme->t = t;
+	/*
+		CODE GENERATION!
+		Declare storage. We concatenate onto buf3...
+	*/
+	strcat(buf3, "asm_label\\loc_gvar_");
+	strcat(buf2, setme->name);
+	strcat(buf3, ";");
+	(i = size_of_type);
+	/*Write out storage.*/
+	while(i >= 8){strcat(buf3, "qwords 0;");i-=8;}
+	while(i >= 4){strcat(buf3,  "longs 0;");i-=4;}
+	while(i >= 2){strcat(buf3, "shorts 0;");i-=2;}
+	while(i >= 1){strcat(buf3,  "bytes 0;");i-=1;}
 	/*Skip the identifier...*/
 	where += len;
 	if(out)
@@ -674,7 +876,9 @@ void parse_arglist(char* where, char** out){
 
 	while(1){
 		while(isspace(*where))where++;
+		scope_variables_must_fit_into_register = 1;
 		parse_vardecl(where, &where);
+		scope_variables_must_fit_into_register = 0;
 		while(isspace(*where))where++;
 		if(*where == /*(*/')')
 		{
@@ -695,32 +899,27 @@ void parse_arglist(char* where, char** out){
 
 
 
-uint64_t type_getsz(type t){
-	if(type_is_ptr(t)) return 8;
-	if(t.basetype == TYPE_U8 || t.basetype == TYPE_I8) return 1;
-	if(t.basetype == TYPE_U16 || t.basetype == TYPE_I16) return 2;
-	if(t.basetype == TYPE_U32 || t.basetype == TYPE_I32|| t.basetype == TYPE_F32) return 4;
-	if(t.basetype == TYPE_U64 || t.basetype == TYPE_I64|| t.basetype == TYPE_F64) return 8;
 
-	puts(internal_fail_pref);
-	puts("Tried to get the size of an unknown type!");
-	puts("Line:");
-	puts(line_copy);
-	exit(1);
-}
 
 
 
 static void handle_dollar_open_ccb(){
 	/*TODO: Handle previously malloc'd scope variable names.*/
 	scope_nvars = 0;
+	scope_variables_must_fit_into_register = 0;
+	if(scope_is_active == 0)
+		scope_depth = 0; /*No scopes.*/
+	if(scope_is_active){
+		scope_depth++;
+		return;
+	}
 	scope_is_active = 1;
 	scope_has_retval = 0;
 	char* s = line + 2;
 	while(isspace(*s)) s++; /*skip whitespace.*/
 	if(*s != '(' /*)*/){
 		puts(syntax_fail_pref);
-		puts("Scope syntax REQUIRES a function prototype, including OPEN PARENTHESES.");
+		puts("Initial Scope syntax REQUIRES a function prototype, including OPEN PARENTHESES.");
 		puts("Line:");
 		puts(line_copy);
 		exit(1);
@@ -734,6 +933,13 @@ static void handle_dollar_open_ccb(){
 		s+=2;
 		while(isspace(*s)) s++; /*skip whitespace.*/
 		scope_retval_type = parse_type(s, &s);
+		if(!type_is_primitive(scope_retval_type)){
+			puts(syntax_fail_pref);
+			puts("Functions are never allowed to return a struct or array. They may be pointers or primitives.");
+			puts("Line:");
+			puts(line_copy);
+			exit(1);
+		}
 		scope_has_retval = 1;
 		while(isspace(*s)) s++; /*skip whitespace.*/
 	}
@@ -742,44 +948,15 @@ static void handle_dollar_open_ccb(){
 	}
 	if(s[0] != ':'){
 		puts(syntax_fail_pref);
-		puts("Scope declaration requires colon separator before local variable list.");
+		puts("Scope declaration requires colon after the parentheses. Examples:\n${():\n${(int a, int b)->int:"); /*}}*/
 		puts("Line:");
 		puts(line_copy);
 		exit(1);
 	}
 	s++; /*consume colon*/
 
-	while(1){
-		while(isspace(*s)) s++; /*skip whitespace.*/
-		/*Check for possible end of string.*/
-		if(
-			*s == '\0'
-		){
-			goto end;
-		}
-		/*check for early semicolon.*/
-		if(
-			*s == ';'
-		){
-			s++;
-			while(isspace(*s)) s++; /*skip whitespace.*/
-			continue;
-		}
-		/*Parse a variable declaration.*/
-		parse_vardecl(s, &s);
-		/*skip whitespace*/
-		while(isspace(*s)) s++; /*skip whitespace.*/
-		/*require a semicolon*/
-		if(*s != ';'){
-			puts(syntax_fail_pref);
-			puts("Expected semicolon in local variable list.");
-			puts("Line:");
-			puts(line_copy);
-			exit(1);
-		}
-		s++;
-	}
-
+	buf3[0] = 0;
+	/*No longer allow local variable declarations in initial scope.*/
 	end:;
 	line[0] = '\0';
 	return;
@@ -793,7 +970,17 @@ static void handle_dollar_close_ccb(){
 		puts(line_copy);
 		exit(1);
 	}
-	scope_is_active = 0;
+	/*Allow for multiple levels of scoping.*/
+	if(scope_depth == 0)
+		scope_is_active = 0;
+	if(scope_depth > 0){
+		scope_depth--;
+		/*Variables */
+		/*TODO: de-allocate stack allocated variables.*/
+	}
+
+	/*DO NOT de-allocate stack allocated variables. We don't write a 'ret' either.*/
+	line[0] = '\0';
 	return;
 }
 
@@ -807,6 +994,8 @@ static unsigned long handle_dollar_normal(char* loc_in, char recursed){
 	unsigned long i;
 	long len_to_replace;
 	unsigned long val;
+	char is_global;
+	char is_pointer;
 /*	if(loc_name[0] == '|'){
 		return 2;
 	}*/
@@ -915,16 +1104,58 @@ static unsigned long handle_dollar_normal(char* loc_in, char recursed){
 					puts(line_copy);
 					exit(1);
 				}
+				buf3[0] = '\0';
 				parse_vardecl(loc_name, &locend);
-				
+				/*TODO: Handle code generation.*/
 				while(isspace(*locend))locend++;
 				if(*locend != ';'){
 					goto fail_dollar_var_needs_semicolon_terminating;
 				}
-				buf2[0] = '\0'; /*we want to do nothing.*/
+				/*if parse_vardecl did any code generation, it was concatenated onto buf3...*/
+				mstrcpy(buf2, buf3);
 				return len + loc_eparen;
 		}
-	}
+
+		if(strprefix("gvar",loc_name))
+		if(!(isalnum(loc_name[4]) ||	 loc_name[4] == '_') ){
+				len = 1;
+				loc_name += 4; /*we have to eat the name.*/
+				len += 4;
+				loc_eparen = strfind(loc_name, ";");
+				if(loc_eparen == -1){
+					fail_dollar_gvar_needs_semicolon_terminating:;
+					puts(syntax_fail_pref);
+					puts("Global variable declaration requires a semicolon terminating.");
+					puts("Line:");
+					puts(line_copy);
+					exit(1);
+				}
+				if(scope_is_active){
+					puts(syntax_fail_pref);
+					puts("$gvar inside of scope.");
+					puts("Line:");
+					puts(line_copy);
+					exit(1);
+				}
+				if(!isspace(loc_name[0])){
+					puts(syntax_fail_pref);
+					puts("Global Declaration requires whitespace after \"gvar\" ");
+					puts("Line:");
+					puts(line_copy);
+					exit(1);
+				}
+				buf3[0] = '\0';
+				parse_gvardecl(loc_name, &locend);
+				/*TODO: Handle code generation.*/
+				while(isspace(*locend))locend++;
+				if(*locend != ';'){
+					goto fail_dollar_gvar_needs_semicolon_terminating;
+				}
+				/*if parse_gvardecl did any code generation (which it hopefully did), it was concatenated onto buf3...*/
+				mstrcpy(buf2, buf3);
+				return len + loc_eparen;
+		}
+	} /*recursed guard.*/
 	if( (isalnum(loc_name[0])) || loc_name[0] == '_')
 	{
 		len = 0;
@@ -962,11 +1193,89 @@ static unsigned long handle_dollar_normal(char* loc_in, char recursed){
 			puts(line_copy);
 			exit(1);
 		}
+		if(scopevars[i].is_stack_allocated){
+			puts(syntax_fail_pref);
+			puts("Stack allocated variable does not have a register ID for the value. The register ID is for its pointer!");
+			puts("Line:");
+			puts(line_copy);
+			exit(1);
+		}
 		loc_name[len] = saved_character;
 		//Now, we put our replacement in.
 		mutoa(buf2, i);
 		//return 1 + length of the identifier.
 		return 1 + len;
+	}
+
+
+	if( (isalnum(loc_name[0])) || loc_name[0] == '&')
+	{
+		len = 0;
+		loc_name++;
+		len++;
+		if(!scope_is_active){
+			puts(syntax_fail_pref);
+			puts("$&X outside of scope.");
+			puts("Line:");
+			puts(line_copy);
+			exit(1);
+		}
+		while(1){
+			if((!isalnum(loc_name[len])) && (loc_name[len] != '_') ){
+				break;
+			}
+			len++;
+		}
+		if(isdigit(loc_name[0])){
+			puts(syntax_fail_pref);
+			puts("No variables may start with a number.");
+			puts("Line:");
+			puts(line_copy);
+			exit(1);
+		}
+
+		saved_character = loc_name[len];
+		loc_name[len] = '\0';
+		for(i =0; i < scope_nvars; i++){
+			if(streq(scopevars[i].name, loc_name)) break;
+		}
+		if(i < scope_nvars){
+			if(!scopevars[i].is_stack_allocated){
+				puts(syntax_fail_pref);
+				puts("Most variables do not have a location on the stack.");
+				puts("The one you are using here doesn't either, so you cannot take the address of it,");
+				puts("Because it does not have one.");
+				puts("Line:");
+				puts(line_copy);
+				exit(1);
+			}
+			loc_name[len] = saved_character;
+			//Now, we put our replacement in.
+			mutoa(buf2, i);
+			//return 1 + length of the identifier.
+			return 1 + len;
+		}
+		/*Search global variables...*/
+		for(i =0; i < scope_gvars; i++){
+			if(streq(gvars[i].name, loc_name)) break;
+		}
+		if(i >= scope_gvars){
+			puts(syntax_fail_pref);
+			puts("Unidentifiable Identifier:");
+			puts(loc_name);
+			puts("It does not exist as a global or local.");
+			puts("Line:");
+			puts(line_copy);
+			exit(1);
+		}
+		loc_name[len] = saved_character;
+		//Now, we put our replacement in.
+		//We're writing a 64 bit literal...
+		strcat(buf2, "q%");
+		strcat(buf2, "loc_gvar_");
+		strcat(buf2, gvars[i].name);
+		strcat(buf2, "%");
+		return 1+len;
 	}
 
 	if(loc_name[0] == '+'){
@@ -999,6 +1308,14 @@ static unsigned long handle_dollar_normal(char* loc_in, char recursed){
 		if(i > 255){
 			puts(general_fail_pref);
 			puts("The register ID generated from a $+! goes beyond the limits of S-ISA-64 standard.");
+			puts("Line:");
+			puts(line_copy);
+			exit(1);
+		}
+		if(i == 0)
+		if(loc_name[1] != '0'){
+			puts(syntax_fail_pref);
+			puts("$+! took in a bad number. Probably a misspelled macro.");
 			puts("Line:");
 			puts(line_copy);
 			exit(1);
@@ -3247,7 +3564,8 @@ int main(int argc, char** argv){
 		 	(label_offset = 0),
 		 	(scope_is_active = 0),
 		 	(nguards = 0),
-		 	(is_guarded = 0)
+		 	(is_guarded = 0),
+		 	(scope_gvars=0)
 		)
 		{/*For loop, 2 passes*/
 		while(1){ /*While loop fetching lines*/
@@ -3330,7 +3648,7 @@ int main(int argc, char** argv){
 
 			if(strprefix("$}", line)){
 				handle_dollar_close_ccb();
-				goto end;
+				goto end_of_syntax_sugar_eval;
 			}
 
 			if(strprefix("${", line)){
