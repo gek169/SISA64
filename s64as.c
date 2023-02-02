@@ -189,7 +189,7 @@ static void decl_guard(){
 }
 
 
-int guard_is_used(){
+static int guard_is_used(){
 	unsigned long i;
 	char* name;
 	remove_trailing_whitespace();
