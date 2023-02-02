@@ -20,41 +20,42 @@ ${():
 	$var byte char_newline;
 	
 	${
-	$var u64 beyond_max_iter;
-	//initialize my variable to zero.
-	im8 $zero, 0;
-	st16 $zero, q%myVariable%;
-	im8 $char_mod, 10;
-	im8 $char_zero, '0';
-	im8 $char_newline, '\n';
+		$var u64 beyond_max_iter;
+		$var u64[3] myarray;
+		//initialize my variable to zero.
+		im8 $zero, 0;
+		st16 $zero, q%myVariable%;
+		im8 $char_mod, 10;
+		im8 $char_zero, '0';
+		im8 $char_newline, '\n';
 
-	//do an initial increment.
-	ld16 $a, &%myVariable%;
-	inc $a;
-	st16 $a, &%myVariable%;
-	im16 $beyond_max_iter, S%51%; //using signed short, for a change!
-
-	$|
-
-	[while]{
-		ld16 $a, &%myVariable%;
-		ucmp $+0!, $a, $beyond_max_iter;
-		//for "not equals" we just do nothing...
-		//explicit
-		//bool $+0!;
-	}{$+0!}{
-		//modulo a and add the value '0'
-		umod $a, $char_mod;
-		iadd $a, $char_zero;
-		//dwrite the result.
-		dwrite $zero, $a;
-		//write a newline.
-		dwrite $zero, $char_newline;
+		//do an initial increment.
 		ld16 $a, &%myVariable%;
 		inc $a;
 		st16 $a, &%myVariable%;
-	}
-	$|
+		im16 $beyond_max_iter, S%51%; asm_print; //using signed short, for a change!
+
+		$|
+
+		[while]{
+			ld16 $a, &%myVariable%;
+			ucmp $+0!, $a, $beyond_max_iter;
+			//for "not equals" we just do nothing...
+			//explicit
+			//bool $+0!;
+		}{$+0!}{
+			//modulo a and add the value '0'
+			umod $a, $char_mod;
+			iadd $a, $char_zero;
+			//dwrite the result.
+			dwrite $zero, $a;
+			//write a newline.
+			dwrite $zero, $char_newline;
+			ld16 $a, &%myVariable%;
+			inc $a;
+			st16 $a, &%myVariable%;
+		}
+		$|
 
 	$}
 	example_die:

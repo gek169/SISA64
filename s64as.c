@@ -373,6 +373,8 @@ char type_is_primitive(type t){
 type parse_type(char* where, char** out){
 	uint64_t basetype = 7;
 	uint64_t ptrlevel = 0;
+	uint64_t arrlen = 0;
+	long loc_ebrack;
 	type t = {0};
 	while(isspace(*where))where++;
 
@@ -579,10 +581,32 @@ type parse_type(char* where, char** out){
 		where++;
 	}
 	/*TODO: Parse arrays*/
+	if(*where == '['){
+		where++; /*consume opening ccb*/
+		arrlen = matou(where);
+		loc_ebrack = strfind(where, "]");
+		if(loc_ebrack == -1){
+			puts(syntax_fail_pref);
+			puts("You cannot have an array type without a closing curly brace.");
+			puts("Line:");
+			puts(line_copy);
+			exit(1);
+		}
+		if(arrlen == 0){
+			puts(syntax_fail_pref);
+			puts("You may not declare a zero-length array type.");
+			puts("Line:");
+			puts(line_copy);
+			exit(1);
+		}
+		where += loc_ebrack;
+		where++; /*skip the ending bracket as well.*/
+	}
 
 	t.basetype = basetype;
 	t.is_lvalue = 1;
 	t.ptrlevel = ptrlevel;
+	t.arraylen = arrlen;
 
 	if(out)
 		*out = where;
@@ -724,19 +748,22 @@ void parse_vardecl(char* where, char** out){
 				exit(1);
 			}
 
-	/*CODE GENERATION! Allocate space on the stack.*/
+	/*CODE GENERATION! 
+		>Allocate space on the stack.
+		>Assign that stack pointer to a register.
+	*/
+	mstrcpy(setme->name, where);
 	if(!t_is_primitive){
 		strcat(buf3, "im64 $+0!, q%");
 		mutoa(buf3 + strlen(buf3), size_of_type);
 		strcat(buf3, "%;");
 		/*Assign the pointer...*/
-		strcat(buf3, "getstp $");
+		strcat(buf3, "getstp $&");
 		strcat(buf3, setme->name);
 		strcat(buf3, ";");
-		strcat(buf3, "getstp $+1!;iadd $+0!,$+1!;setstp $+0!;");
+		strcat(buf3, "getstp $+1!;iadd $+0!, $+1!;setstp $+0!;");
 		setme->is_stack_allocated = 1;
 	}
-	mstrcpy(setme->name, where);
 	where[len] = saved_character;
 	scope_nvars++;
 	setme->t = t;
@@ -970,6 +997,7 @@ static void handle_dollar_close_ccb(){
 	unsigned long stackmanip1;
 	unsigned long stackmanip2;
 	uint64_t i;
+	line[0] = '\0';
 	if(!scope_is_active){
 		puts(general_fail_pref);
 		puts("Tried to close a scope when there was none active.");
@@ -977,7 +1005,6 @@ static void handle_dollar_close_ccb(){
 		puts(line_copy);
 		exit(1);
 	}
-	line[0] = '\0';
 	/*Allow for multiple levels of scoping.*/
 	if(scope_depth == 0){
 		scope_is_active = 0;
@@ -1068,7 +1095,7 @@ static void handle_dollar_close_ccb(){
 			mutoa(line+strlen(line), stackmanip2);
 		strcat(line, ";");
 		/*Set stack pointer to new value.*/
-		strcat(line, "setstp");
+		strcat(line, "setstp ");
 			mutoa(line+strlen(line), stackmanip1);
 		strcat(line, ";");
 
@@ -1171,68 +1198,69 @@ static unsigned long handle_dollar_normal(char* loc_in, char recursed){
 					if(scopevars[i].is_stack_allocated)
 						stack_usage += type_getsz(scopevars[i].t);
 				}
-					if(stack_usage > 0){
-						/*pick two registers.*/
-						stackmanip1 = 1;
-						stackmanip2 = 1;
-						if(
-							stackmanip1 == val
-						) {
-							stackmanip1++;
-							while(
-								(stackmanip2 == stackmanip1) || 
-								(stackmanip2 == val)
-							)stackmanip2++;
-						}
-						if(stackmanip1 > 255 || stackmanip2 > 255 || 
-							(stackmanip2 == stackmanip1) ||
-							(stackmanip2 == val) ||
-							(stackmanip1 == val)
-						)
-						{
-							puts(internal_fail_pref);
-							puts("Register allocation for stack manipulation on $return FAILED!");
-							puts("Line:");
-							puts(line_copy);
-							exit(1);
-						}
-						strcat(buf2, "getstp ");
-						mutoa(buf2+strlen(buf2), stackmanip1);
-						strcat(buf2, ";");
-						/*immediate value- stack usage*/
-						if(stack_usage > 0xFFffFFff){
-							strcat(buf2, "im64 ");
-								mutoa(buf2+strlen(buf2), stackmanip2);
-							strcat(buf2, ",q%");
-								mutoa(buf2+strlen(buf2), stack_usage);
-						} else if(stack_usage >= 0x10000){
-							strcat(buf2, "im32 ");
-								mutoa(buf2+strlen(buf2), stackmanip2);
-							strcat(buf2, ",l%");
-								mutoa(buf2+strlen(buf2), stack_usage);
-						} else if(stack_usage >= 0x100){
-							strcat(buf2, "im16 ");
-								mutoa(buf2+strlen(buf2), stackmanip2);
-							strcat(buf2, ",s%");
-								mutoa(buf2+strlen(buf2), stack_usage);
-						} else {
-							strcat(buf2, "im8 ");
-								mutoa(buf2+strlen(buf2), stackmanip2);
-							strcat(buf2, ",b%");
-								mutoa(buf2+strlen(buf2), stack_usage);
-						}
-						strcat(buf2, "%;");
-						/*Subtract stack usage.*/
-						strcat(buf2, "isub ");
-							mutoa(buf2+strlen(buf2), stackmanip1);
-						strcat(buf2, ",");
-							mutoa(buf2+strlen(buf2), stackmanip2);
-						strcat(buf2, ";");
-						/*Set stack pointer to new value.*/
-						strcat(buf2, "setstp");
-							mutoa(buf2+strlen(buf2), stackmanip1);
-						strcat(buf2, ";");
+				if(stack_usage > 0)
+				{
+					/*pick two registers.*/
+					stackmanip1 = 1;
+					stackmanip2 = 1;
+					if(
+						stackmanip1 == val
+					) {
+						stackmanip1++;
+						while(
+							(stackmanip2 == stackmanip1) || 
+							(stackmanip2 == val)
+						)stackmanip2++;
 					}
+					if(stackmanip1 > 255 || stackmanip2 > 255 || 
+						(stackmanip2 == stackmanip1) ||
+						(stackmanip2 == val) ||
+						(stackmanip1 == val)
+					)
+					{
+						puts(internal_fail_pref);
+						puts("Register allocation for stack manipulation on $return FAILED!");
+						puts("Line:");
+						puts(line_copy);
+						exit(1);
+					}
+					strcat(buf2, "getstp ");
+					mutoa(buf2+strlen(buf2), stackmanip1);
+					strcat(buf2, ";");
+					/*immediate value- stack usage*/
+					if(stack_usage > 0xFFffFFff){
+						strcat(buf2, "im64 ");
+							mutoa(buf2+strlen(buf2), stackmanip2);
+						strcat(buf2, ",q%");
+							mutoa(buf2+strlen(buf2), stack_usage);
+					} else if(stack_usage >= 0x10000){
+						strcat(buf2, "im32 ");
+							mutoa(buf2+strlen(buf2), stackmanip2);
+						strcat(buf2, ",l%");
+							mutoa(buf2+strlen(buf2), stack_usage);
+					} else if(stack_usage >= 0x100){
+						strcat(buf2, "im16 ");
+							mutoa(buf2+strlen(buf2), stackmanip2);
+						strcat(buf2, ",s%");
+							mutoa(buf2+strlen(buf2), stack_usage);
+					} else {
+						strcat(buf2, "im8 ");
+							mutoa(buf2+strlen(buf2), stackmanip2);
+						strcat(buf2, ",b%");
+							mutoa(buf2+strlen(buf2), stack_usage);
+					}
+					strcat(buf2, "%;");
+					/*Subtract stack usage.*/
+					strcat(buf2, "isub ");
+						mutoa(buf2+strlen(buf2), stackmanip1);
+					strcat(buf2, ",");
+						mutoa(buf2+strlen(buf2), stackmanip2);
+					strcat(buf2, ";");
+					/*Set stack pointer to new value.*/
+					strcat(buf2, "setstp ");
+						mutoa(buf2+strlen(buf2), stackmanip1);
+					strcat(buf2, ";");
+				}
 			
 				if(val == 0){ /*OPTIMIZATION! don't move a register into itself!*/
 					strcat(buf2, "ret");
@@ -1420,7 +1448,7 @@ static unsigned long handle_dollar_normal(char* loc_in, char recursed){
 			//Now, we put our replacement in.
 			mutoa(buf2, i);
 			//return 1 + length of the identifier.
-			return 1 + len;
+			return 2 + len;
 		}
 		/*Search global variables...*/
 		for(i =0; i < scope_gvars; i++){
@@ -1442,7 +1470,7 @@ static unsigned long handle_dollar_normal(char* loc_in, char recursed){
 		strcat(buf2, "loc_gvar_");
 		strcat(buf2, gvars[i].name);
 		strcat(buf2, "%");
-		return 1+len;
+		return 2+len;
 	}
 
 	if(loc_name[0] == '+'){
@@ -1494,6 +1522,8 @@ static unsigned long handle_dollar_normal(char* loc_in, char recursed){
 	puts("Unknown $ command.");
 	puts("Line:");
 	puts(line_copy);
+	puts("Line Internally:");
+	puts(line);
 	exit(1);
 	return 1;
 }
