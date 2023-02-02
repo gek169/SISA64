@@ -1,0 +1,48 @@
+
+..include"asm/structure.h64"
+..include"asm/avdevice.h64"
+
+
+
+
+looptop:
+${():\
+	u64 a;\
+	u64 periphid;\
+	u64 c;\
+	u32 colorvalue;\
+	
+	//set up a clear screen command.
+	im64 $a, q%AV_CLEAR_SCREEN%;
+	im8 $periphid, 1;
+	im8 $c, 44;
+	lsh $periphid, $c; //shift past those 44 bits...
+	or $a, $periphid; //create the peripheral ID.
+	//immediate we want to use.
+	im32 $colorvalue, 100, 100, 255, 0;
+	dwrite $a, $colorvalue;
+	//next, render the screen.
+	im64 $a, q%AV_RENDERSCREEN%
+	or $a, $periphid
+	//what we write does not matter...
+	dwrite $a, $colorvalue;
+
+	//Check if we should quit....
+
+	im64 $a, q%AV_POLLEVENTS%
+	or $a, $periphid;
+
+	mov $c, $a;
+
+$|
+	[if]{
+		dread $c;
+	}{$c}{
+		hlt;
+	}
+$|
+	jmp q%looptop%
+	
+
+
+$}

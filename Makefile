@@ -39,6 +39,10 @@ clean:
 example: all
 	./s64as -i asm/example.s64 -o example.bin
 	./s64e example.bin
+
+video: all
+	./s64as -i asm/video.s64 -o video.bin
+	./s64e video.bin
 	
 example2: all
 	./s64as -i asm/example2.s64 -o example2.bin

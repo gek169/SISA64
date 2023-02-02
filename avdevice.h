@@ -191,7 +191,10 @@ static void av_init(){
 				"SDL_Error: %s\n", SDL_GetError());
 			exit(1);
 		}
-		sdl_tex = SDL_CreateTexture(sdl_rend, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, 
+		sdl_tex = SDL_CreateTexture(sdl_rend, 
+			/*SDL_PIXELFORMAT_ARGB8888, */
+			SDL_PIXELFORMAT_RGBA32,
+			SDL_TEXTUREACCESS_TARGET, 
 			SCREEN_WIDTH,
 			SCREEN_HEIGHT
 		);
@@ -241,10 +244,10 @@ static uint64_t av_device_read(uint64_t addr){
 	if(addr == (BEGIN_CONTROLLER+4)) {return video_register_B;}
 	if(addr == (BEGIN_CONTROLLER+5)) {return video_register_C;}
 	if(addr == (BEGIN_CONTROLLER+6)) {return video_register_D;}
-	if(addr == (BEGIN_CONTROLLER + 100)) return pv();
-	if(addr == (BEGIN_CONTROLLER + 101)) return read_gamer_buttons();
+	if(addr == (BEGIN_CONTROLLER + 0x100)) return pv();
+	if(addr == (BEGIN_CONTROLLER + 0x101)) return read_gamer_buttons();
 	/*102 is the stdin buf. 103 is to clear/flush the stdin buf.*/
-	if(addr == (BEGIN_CONTROLLER + 102)) return av_stdin_buf_pop_char();
+	if(addr == (BEGIN_CONTROLLER + 0x102)) return av_stdin_buf_pop_char();
 	/*Read video memory.*/
 	if(addr >= BEGIN_VMEM && addr < (BEGIN_VMEM + VIDEO_MEM_SZ))
 		return vmem_read(addr - BEGIN_VMEM);
@@ -317,12 +320,12 @@ static void av_device_write(uint64_t addr, uint64_t val){
 		}
 		return;
 	}
-	if(addr == (BEGIN_CONTROLLER + 102)){
+	if(addr == (BEGIN_CONTROLLER + 0x102)){
 		av_stdin_buf_push_char(val);
 		return;
 	}
 	/*flush the av stdin buffer.*/
-	if(addr == (BEGIN_CONTROLLER + 103)){
+	if(addr == (BEGIN_CONTROLLER + 0x103)){
 		av_stdin_buf_len = 0;
 		return;
 	}
