@@ -59,7 +59,6 @@ example_die:
 hlt;
 
 $}
-
 myVariable:
 	shorts 0
 
