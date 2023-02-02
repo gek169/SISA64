@@ -320,6 +320,15 @@ static void av_device_write(uint64_t addr, uint64_t val){
 		}
 		return;
 	}
+	/*Hardware DMA, ram to amem*/
+	if(addr == (BEGIN_CONTROLLER+14)) {
+		memcpy(
+			audiomemory + video_register_A,
+			sisa64_mem + video_register_B,
+			video_register_C
+		);
+		return;
+	}
 	if(addr == (BEGIN_CONTROLLER + 0x102)){
 		av_stdin_buf_push_char(val);
 		return;
