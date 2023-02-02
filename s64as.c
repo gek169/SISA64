@@ -633,7 +633,7 @@ void parse_vardecl(char* where, char** out){
 	setme = scopevars + scope_nvars;
 	setme->is_static_allocated = 0;
 	setme->is_stack_allocated = 0; /*Default.*/
-	setme->depth = 0; /*SAVED! for future use.*/
+	setme->depth = scope_depth; /*Used when determining end-of-scope rules.*/
 	if(scope_nvars == SCOPE_MAX_VARS){
 		puts(general_fail_pref);
 		puts("Too many scope variables are declared.");
@@ -905,11 +905,14 @@ void parse_arglist(char* where, char** out){
 
 static void handle_dollar_open_ccb(){
 	/*TODO: Handle previously malloc'd scope variable names.*/
-	scope_nvars = 0;
+	
 	scope_variables_must_fit_into_register = 0;
-	if(scope_is_active == 0)
+	if(scope_is_active == 0){
 		scope_depth = 0; /*No scopes.*/
+		scope_nvars = 0;
+	}
 	if(scope_is_active){
+		line[0] = '\0';
 		scope_depth++;
 		return;
 	}
@@ -963,6 +966,10 @@ static void handle_dollar_open_ccb(){
 }
 
 static void handle_dollar_close_ccb(){
+	uint64_t stack_usage;
+	unsigned long stackmanip1;
+	unsigned long stackmanip2;
+	uint64_t i;
 	if(!scope_is_active){
 		puts(general_fail_pref);
 		puts("Tried to close a scope when there was none active.");
@@ -970,17 +977,106 @@ static void handle_dollar_close_ccb(){
 		puts(line_copy);
 		exit(1);
 	}
+	line[0] = '\0';
 	/*Allow for multiple levels of scoping.*/
-	if(scope_depth == 0)
+	if(scope_depth == 0){
 		scope_is_active = 0;
-	if(scope_depth > 0){
+		return;
+	}
+	if(scope_depth > 0)
+	{
 		scope_depth--;
-		/*Variables */
-		/*TODO: de-allocate stack allocated variables.*/
+		stack_usage = 0;
+		/*Compute stack usage by variables beyond the new scope depth.*/
+		for(i = scope_nvars-1;; i--){
+			if(scopevars[i].depth > scope_depth){
+				/*sanity check...*/
+				if(scopevars[i].depth != scope_depth+1){
+					puts(internal_fail_pref);
+					puts("Something impossible happened.");
+					puts("It appears that the saved scope depth of a variable");
+					puts("was corrupted.");
+					puts("At the point of a closing curly brace, a scope variable");
+					puts("has a scope depth greater than the old scope depth.");
+					exit(1);
+				}
+				if(scopevars[i].is_stack_allocated)
+					stack_usage += type_getsz(scopevars[i].t);
+				if(i == 0) break;
+				continue;
+			}
+			break;
+		}
+		/*When no stack is being used... we don't need to generate any code!*/
+		if(stack_usage == 0) return;
+		/*reduce scope_nvars to match the new scope depth.*/
+		while(
+			scope_nvars && 
+			(scopevars[scope_nvars-1].depth > scope_depth)
+		)scope_nvars--;
+		/*Allocate registers.*/
+		stackmanip1 = 1;
+		stackmanip2 = 1;
+		while(stackmanip1 < scope_nvars) stackmanip1++;
+		while(stackmanip2 < scope_nvars) stackmanip2++;
+		while(stackmanip2 == stackmanip1) stackmanip2++;
+		if(stackmanip1 > 255 || stackmanip2 > 255 || 
+			(stackmanip2 == stackmanip1) ||
+			(stackmanip2 < scope_nvars) ||
+			(stackmanip1 < scope_nvars)
+		)
+		{
+			puts(internal_fail_pref);
+			puts("Register allocation for stack manipulation on end-of-scope FAILED!");
+			puts("Line:");
+			puts(line_copy);
+			exit(1);
+		}
+		
+		/*Generate code.*/
+		/*First, grab the stack pointer...*/
+		strcat(line, "getstp ");
+		mutoa(line+strlen(line), stackmanip1);
+		strcat(line, ";");
+		/*Next, load an immediate value, the stack usage...*/
+		if(stack_usage > 0xFFffFFff){
+			strcat(line, "im64 ");
+				mutoa(line+strlen(line), stackmanip2);
+			strcat(line, ",q%");
+				mutoa(line+strlen(line), stack_usage);
+		} else if(stack_usage >= 0x10000){
+			strcat(line, "im32 ");
+				mutoa(line+strlen(line), stackmanip2);
+			strcat(line, ",l%");
+				mutoa(line+strlen(line), stack_usage);
+		} else if(stack_usage >= 0x100){
+			strcat(line, "im16 ");
+				mutoa(line+strlen(line), stackmanip2);
+			strcat(line, ",s%");
+				mutoa(line+strlen(line), stack_usage);
+		} else {
+			strcat(line, "im8 ");
+				mutoa(line+strlen(line), stackmanip2);
+			strcat(line, ",b%");
+				mutoa(line+strlen(line), stack_usage);
+		}
+		strcat(line, "%;");
+		/*Subtract stack usage.*/
+		strcat(line, "isub ");
+			mutoa(line+strlen(line), stackmanip1);
+		strcat(line, ",");
+			mutoa(line+strlen(line), stackmanip2);
+		strcat(line, ";");
+		/*Set stack pointer to new value.*/
+		strcat(line, "setstp");
+			mutoa(line+strlen(line), stackmanip1);
+		strcat(line, ";");
+
+		/*we finished generating code for the scope depth.*/
+		return;
 	}
 
 	/*DO NOT de-allocate stack allocated variables. We don't write a 'ret' either.*/
-	line[0] = '\0';
 	return;
 }
 
@@ -994,8 +1090,9 @@ static unsigned long handle_dollar_normal(char* loc_in, char recursed){
 	unsigned long i;
 	long len_to_replace;
 	unsigned long val;
-	char is_global;
-	char is_pointer;
+	uint64_t stack_usage;
+	unsigned long stackmanip1;
+	unsigned long stackmanip2;
 /*	if(loc_name[0] == '|'){
 		return 2;
 	}*/
@@ -1067,11 +1164,81 @@ static unsigned long handle_dollar_normal(char* loc_in, char recursed){
 					exit(1);
 				}
 				val = matou(loc_name);
+				/*first... get an approximation of stack usage...*/
+				buf2[0] = '\0';
+				stack_usage = 0;
+				for(i = 0; i < scope_nvars; i++){
+					if(scopevars[i].is_stack_allocated)
+						stack_usage += type_getsz(scopevars[i].t);
+				}
+					if(stack_usage > 0){
+						/*pick two registers.*/
+						stackmanip1 = 1;
+						stackmanip2 = 1;
+						if(
+							stackmanip1 == val
+						) {
+							stackmanip1++;
+							while(
+								(stackmanip2 == stackmanip1) || 
+								(stackmanip2 == val)
+							)stackmanip2++;
+						}
+						if(stackmanip1 > 255 || stackmanip2 > 255 || 
+							(stackmanip2 == stackmanip1) ||
+							(stackmanip2 == val) ||
+							(stackmanip1 == val)
+						)
+						{
+							puts(internal_fail_pref);
+							puts("Register allocation for stack manipulation on $return FAILED!");
+							puts("Line:");
+							puts(line_copy);
+							exit(1);
+						}
+						strcat(buf2, "getstp ");
+						mutoa(buf2+strlen(buf2), stackmanip1);
+						strcat(buf2, ";");
+						/*immediate value- stack usage*/
+						if(stack_usage > 0xFFffFFff){
+							strcat(buf2, "im64 ");
+								mutoa(buf2+strlen(buf2), stackmanip2);
+							strcat(buf2, ",q%");
+								mutoa(buf2+strlen(buf2), stack_usage);
+						} else if(stack_usage >= 0x10000){
+							strcat(buf2, "im32 ");
+								mutoa(buf2+strlen(buf2), stackmanip2);
+							strcat(buf2, ",l%");
+								mutoa(buf2+strlen(buf2), stack_usage);
+						} else if(stack_usage >= 0x100){
+							strcat(buf2, "im16 ");
+								mutoa(buf2+strlen(buf2), stackmanip2);
+							strcat(buf2, ",s%");
+								mutoa(buf2+strlen(buf2), stack_usage);
+						} else {
+							strcat(buf2, "im8 ");
+								mutoa(buf2+strlen(buf2), stackmanip2);
+							strcat(buf2, ",b%");
+								mutoa(buf2+strlen(buf2), stack_usage);
+						}
+						strcat(buf2, "%;");
+						/*Subtract stack usage.*/
+						strcat(buf2, "isub ");
+							mutoa(buf2+strlen(buf2), stackmanip1);
+						strcat(buf2, ",");
+							mutoa(buf2+strlen(buf2), stackmanip2);
+						strcat(buf2, ";");
+						/*Set stack pointer to new value.*/
+						strcat(buf2, "setstp");
+							mutoa(buf2+strlen(buf2), stackmanip1);
+						strcat(buf2, ";");
+					}
+			
 				if(val == 0){ /*OPTIMIZATION! don't move a register into itself!*/
-					mstrcpy(buf2, "ret");
+					strcat(buf2, "ret");
 					return len + loc_eparen;					
 				}
-				mstrcpy(buf2, "mov 0,");
+				strcat(buf2, "mov 0,");
 				mutoa(buf2 + strlen(buf2),val);
 				strcat(buf2, ";ret");
 				return len + loc_eparen; /*We want to leave the semicolon.*/
