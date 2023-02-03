@@ -1,6 +1,6 @@
 
 
-static const char* insn_names[93] = {
+static const char* insn_names[96] = {
 	"hlt",
 	"nop",
 	"become_user",
@@ -109,14 +109,17 @@ static const char* insn_names[93] = {
 	//jump if zero. Makes compares a bit easier.
 	"jiz",
 	"jlt",
-	"jgt"
+	"jgt",
+	"ze8",
+	"ze16",
+	"ze32"
 	//dummy
 	//,""
 };
 
 
 //how many bytes of arguments does the instruction take?
-static const unsigned insn_nargs[93] = {
+static const unsigned insn_nargs[96] = {
 	//halt and nop,
 	0,
 	0,
@@ -196,12 +199,16 @@ static const unsigned insn_nargs[93] = {
 	9,
 	//jlt and jgt are the same
 	9,
-	9
+	9,
+	//zero extend 8,16,32
+	1,
+	1,
+	1
 	//dummy
 	//,0
 };
 
-static const char* insn_repl[93] = {
+static const char* insn_repl[96] = {
 	"bytes0;",
 	"bytes1;",
 	//become user has arguments
@@ -330,7 +337,11 @@ static const char* insn_repl[93] = {
 	"bytes90,",
 	//jlt, jgt
 	"bytes91,",
-	"bytes92,"
+	"bytes92,",
+	/*ze8,ze16,ze32*/
+	"bytes93,",
+	"bytes94,",
+	"bytes95,"
 	//,""
 };
-static const unsigned n_insns = 93;
+static const unsigned n_insns = 96;

@@ -168,7 +168,10 @@ void sisa64_emulate(){
 		&&J_JIZ,
 		&&J_JLT,
 		&&J_JGT,
-		&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,
+		&&J_ZE8,
+		&&J_ZE16,
+		&&J_ZE32,
+		&&J_HLT,
 		&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,
 		&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,
 
@@ -1287,6 +1290,22 @@ void sisa64_emulate(){
  		;
 	}
 	DISPATCH();
+
+	J_ZE8:{
+		gpregs[EAT_BYTE()] &= (uint64_t)0xff;
+	}
+	DISPATCH();
+	
+	J_ZE16:{
+		gpregs[EAT_BYTE()] &= (uint64_t)0xffFF;
+	}
+	DISPATCH();
+
+	J_ZE32:	{
+		gpregs[EAT_BYTE()] &= (uint64_t)0xffFFffFF;
+	}
+	DISPATCH();
+
 
 	
 	J_NOP:DISPATCH();
