@@ -1034,12 +1034,12 @@ static void handle_dollar_close_ccb(){
 			}
 			break;
 		}
-		/*When no stack is being used... we don't need to generate any code!*/
 		/*reduce scope_nvars to match the new scope depth.*/
 		while(
 			scope_nvars && 
 			(scopevars[scope_nvars-1].depth > scope_depth)
 		)scope_nvars--;
+		/*When no stack is being used... we don't need to generate any code!*/
 		if(stack_usage == 0) return;
 		/*Allocate registers.*/
 		stackmanip1 = scope_nvars;
@@ -1182,8 +1182,7 @@ static unsigned long handle_dollar_normal(char* loc_in, char recursed){
 				if(stack_usage > 0)
 				{
 					/*pick two registers.*/
-					if(scope_has_retval){
-						
+					if(scope_has_retval){						
 						stackmanip1 = 1;
 						stackmanip2 = 1;
 						while(stackmanip1 == val) 
