@@ -981,18 +981,22 @@ void sisa64_emulate(){
 	J_ITOD:;{
 		uint8_t regid;
 		regid = EAT_BYTE();
-		gpregs[regid] = (int64_t)f64_rto_i64((double) ((int64_t)gpregs[regid]) );
+		gpregs[regid] = f64_rto_i64( /*pun the f64 to an i64*/
+			(double) /*do the actual conversion from integer to f64*/
+			((int64_t)gpregs[regid]) /*reinterpret the u64 to an i64*/
+
+		);
 	}
 	DISPATCH();
 
 	J_ITOF:;{
 		uint8_t regid;
-		uint32_t temp;
+		uint32_t temp; /*Need this to avoid a sign extension.*/
 		regid = EAT_BYTE();
 		
-		temp = f32_rto_i32( /*pun the float to an integer*/
+		temp = f32_rto_i32( /*pun the float to an i32*/
 			(float)  /*do the actual conversion from integer to float*/
-			((int32_t)gpregs[regid]) /*make an i32 */
+			((int32_t)gpregs[regid]) /*reinterpret the bottom 32 bits of the u64 as an i32.*/
 		);
 		gpregs[regid] = temp; /*no sign extension occurs.*/
 	}
