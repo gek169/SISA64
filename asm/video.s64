@@ -6,11 +6,11 @@
 
 
 looptop:
-${():\
-	u64 a;\
-	u64 periphid;\
-	u64 c;\
-	u32 colorvalue;\
+${():
+$var u64 a;
+$var u64 periphid;
+$var u64 c;
+$var u32 colorvalue;
 	
 	//set up a clear screen command.
 	im64 $a, q%AV_CLEAR_SCREEN%;
