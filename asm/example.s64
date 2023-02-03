@@ -82,8 +82,8 @@ ${(int a, int b) -> u64   :
 	$var qword return_value;
 
 	mov $return_value, $a;
-	iadd $return_value, $b; asm_print;
-	$return $return_value; asm_print;
+	iadd $return_value, $b;
+	$return $return_value;
 	
 $}
 
@@ -98,7 +98,16 @@ $}
 do_nothing_inefficiently:
 ${():
 	$var u64[300] bigarr;
-	$return; asm_print;
+	${
+		$var u64[500] bigger;
+	$}
+	${
+		$var u64[5000] bigger;
+	$}
+	${
+		$var u64[50000] bigger;
+		$return; asm_print;
+	$}
 	hlt;
 $}
 

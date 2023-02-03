@@ -877,7 +877,7 @@ void parse_gvardecl(char* where, char** out){
 		Declare storage. We concatenate onto buf3...
 	*/
 	strcat(buf3, "asm_label\\loc_gvar_");
-	strcat(buf2, setme->name);
+	strcat(buf3, setme->name);
 	strcat(buf3, ";");
 	(i = size_of_type);
 	/*Write out storage.*/
@@ -1042,11 +1042,8 @@ static void handle_dollar_close_ccb(){
 			(scopevars[scope_nvars-1].depth > scope_depth)
 		)scope_nvars--;
 		/*Allocate registers.*/
-		stackmanip1 = 1;
-		stackmanip2 = 1;
-		while(stackmanip1 < scope_nvars) stackmanip1++;
-		while(stackmanip2 < scope_nvars) stackmanip2++;
-		while(stackmanip2 == stackmanip1) stackmanip2++;
+		stackmanip1 = scope_nvars;
+		stackmanip2 = stackmanip1+1;
 		if(stackmanip1 > 255 || stackmanip2 > 255 || 
 			(stackmanip2 == stackmanip1) ||
 			(stackmanip2 < scope_nvars) ||
