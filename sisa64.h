@@ -9,8 +9,8 @@
 
 	configured for 4 gigabytes
 */
-#define SYS_MEMORY_SIZE	0x100000000
-#define SYS_MEMORY_MASK	0x0FFFFFFFF
+#define SYS_MEMORY_SIZE	0x10000000
+#define SYS_MEMORY_MASK	0x0FFFFFFF
 /*memory for the implementation.
 	Due to the new mask implementation, we don't need the extra bytes at the end.
 
