@@ -18,7 +18,7 @@ static uint32_t vmem[VIDEO_MEM_SZ] = {0}; /*two screens worth of video memory.*/
 static uint32_t* screenmem;
 
 static int32_t audio_left = 0;
-static int32_t sfbuf_left[NSOUNDEFFECTS] = 0;
+static int32_t sfbuf_left[NSOUNDEFFECTS] = {0};
 
 static SDL_Window *sdl_win = NULL;
 static SDL_Renderer *sdl_rend = NULL;
