@@ -1151,25 +1151,7 @@ static unsigned long handle_dollar_normal(char* loc_in, char recursed){
 					puts(line);
 					exit(1);
 				}
-				if(loc_name[0] == '\0' || loc_name[0] == ';'){
-					if(scope_has_retval){
-						puts(syntax_fail_pref);
-						puts("Scope has a return value, but return has no register ID to return!");
-						puts("Line:");
-						puts(line_copy);
-						exit(1);
-					}
-					/*Leave the semicolon!*/
-					mstrcpy(buf2,"ret");
-					return len;
-				}
-				if(!scope_has_retval){
-					puts(syntax_fail_pref);
-					puts("Scope does not have a return value, yet, there is something here...");
-					puts("Line:");
-					puts(line_copy);
-					exit(1);
-				}
+
 				/*We have something to evaluate...*/
 				if(loc_name[0] == '$'){ /*Perform a recursive call!*/
 					len_to_replace = handle_dollar_normal(loc_name,1);
@@ -1183,14 +1165,16 @@ static unsigned long handle_dollar_normal(char* loc_in, char recursed){
 				if(loc_eparen == -1){ /*This is probably redundant.*/
 					goto return_no_semicolon;
 				}
-				if(!misdigit(loc_name[0])){
-					puts(syntax_fail_pref);
-					puts("Return value takes a register id. Either use a $variable_name, $+13! or an integer literal.");
-					puts("Line:");
-					puts(line_copy);
-					exit(1);
-				}
-				val = matou(loc_name);
+				if(scope_has_retval)
+					if(!misdigit(loc_name[0])){
+						puts(syntax_fail_pref);
+						puts("Return value takes a register id. Either use a $variable_name, $+13! or an integer literal.");
+						puts("Line:");
+						puts(line_copy);
+						exit(1);
+					}
+				val = 0;
+				if(scope_has_retval) val = matou(loc_name);
 				/*first... get an approximation of stack usage...*/
 				buf2[0] = '\0';
 				stack_usage = 0;
@@ -1201,29 +1185,36 @@ static unsigned long handle_dollar_normal(char* loc_in, char recursed){
 				if(stack_usage > 0)
 				{
 					/*pick two registers.*/
-					stackmanip1 = 1;
-					stackmanip2 = 1;
-					if(
-						stackmanip1 == val
-					) {
-						stackmanip1++;
+					if(scope_has_retval){
+						
+						stackmanip1 = 1;
+						stackmanip2 = 1;
+						while(stackmanip1 == val) 
+							stackmanip1++;
 						while(
-							(stackmanip2 == stackmanip1) || 
-							(stackmanip2 == val)
-						)stackmanip2++;
+							stackmanip2 == val || 
+							stackmanip2 == stackmanip1
+						) stackmanip2++;
+						if((stackmanip1 > 255) || stackmanip2 > 255 || 
+							(stackmanip2 == stackmanip1) ||
+							(stackmanip2 == val) ||
+							(stackmanip1 == val)
+						)
+						{
+							puts(internal_fail_pref);
+							puts("Register allocation for stack manipulation on $return FAILED!");
+							puts("Line:");
+							puts(line_copy);
+							exit(1);
+						}
 					}
-					if(stackmanip1 > 255 || stackmanip2 > 255 || 
-						(stackmanip2 == stackmanip1) ||
-						(stackmanip2 == val) ||
-						(stackmanip1 == val)
-					)
-					{
-						puts(internal_fail_pref);
-						puts("Register allocation for stack manipulation on $return FAILED!");
-						puts("Line:");
-						puts(line_copy);
-						exit(1);
+					if(!scope_has_retval){
+						/*This becomes very easy!*/
+						stackmanip1 = 1;
+						stackmanip2 = 2;
 					}
+					
+
 					strcat(buf2, "getstp ");
 					mutoa(buf2+strlen(buf2), stackmanip1);
 					strcat(buf2, ";");
@@ -1260,6 +1251,25 @@ static unsigned long handle_dollar_normal(char* loc_in, char recursed){
 					strcat(buf2, "setstp ");
 						mutoa(buf2+strlen(buf2), stackmanip1);
 					strcat(buf2, ";");
+				}
+				if(loc_name[0] == '\0' || loc_name[0] == ';'){
+					if(scope_has_retval){
+						puts(syntax_fail_pref);
+						puts("Scope has a return value, but return has no register ID to return!");
+						puts("Line:");
+						puts(line_copy);
+						exit(1);
+					}
+					/*Leave the semicolon!*/
+					strcat(buf2,"ret");
+					return len;
+				}
+				if(!scope_has_retval){
+					puts(syntax_fail_pref);
+					puts("Scope does not have a return value, yet, there is something here...");
+					puts("Line:");
+					puts(line_copy);
+					exit(1);
 				}
 			
 				if(val == 0){ /*OPTIMIZATION! don't move a register into itself!*/
