@@ -1467,6 +1467,7 @@ static unsigned long handle_dollar_normal(char* loc_in, char recursed){
 			puts("Stack allocated variable:");
 			puts(loc_name);
 			puts("does not have a register ID for the value. The register ID is for its pointer!");
+			puts("Use $&my_variable to get that register ID.");
 			puts("Line:");
 			puts(line_copy);
 			exit(1);
