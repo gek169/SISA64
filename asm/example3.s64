@@ -1,0 +1,30 @@
+//test dread on the user port.
+..include"asm/structure.h64"
+
+nop;
+
+${():
+	$var u64 a;
+	$var u64 b;
+	$var u64 c;
+	$var u64 d;
+
+	im8 $a, 0;
+
+$|
+	[if]{
+		dread $a; //get user input.
+		im8 $b, '1';
+		ucmp $c, $a, $b;
+		not $c;
+	}{$a}{
+		:looptop:
+			im8 $b, '0';
+			im8 $a,  0;
+			dwrite $a, $b;
+		jmp q%looptop%; 
+	}
+$|
+	hlt;
+
+$}
