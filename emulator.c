@@ -171,8 +171,9 @@ void sisa64_emulate(){
 		&&J_ZE8,
 		&&J_ZE16,
 		&&J_ZE32,
-		&&J_HLT,
-		&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,
+		&&J_FTOD,
+		&&J_DTOF,
+		&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,
 		&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,
 
 		&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,&&J_HLT,
@@ -987,7 +988,11 @@ void sisa64_emulate(){
 	J_ITOF:;{
 		uint8_t regid;
 		regid = EAT_BYTE();
-		gpregs[regid] = (int64_t)f32_rto_i32((float) ((int32_t)gpregs[regid]));
+		
+		gpregs[regid] = (int64_t)f32_rto_i32( /*type pun the float to an i32, and sign extend*/
+			(float)  /*do the actual conversion from integer to float*/
+			((int32_t)gpregs[regid]) /*make an i32 */
+		);
 	}
 	DISPATCH();
 
@@ -1001,7 +1006,7 @@ void sisa64_emulate(){
 	J_FTOI:;{ /*FTOI sign extends...*/
 		uint8_t regid;
 		regid = EAT_BYTE();
-		gpregs[regid] = (int64_t)u32_rto_f32(gpregs[regid]);
+		gpregs[regid] = (int64_t)(int32_t)u32_rto_f32(gpregs[regid]);
 	}
 	DISPATCH();
 
@@ -1295,7 +1300,6 @@ void sisa64_emulate(){
 		gpregs[EAT_BYTE()] &= (uint64_t)0xff;
 	}
 	DISPATCH();
-	
 	J_ZE16:{
 		gpregs[EAT_BYTE()] &= (uint64_t)0xffFF;
 	}
@@ -1306,6 +1310,29 @@ void sisa64_emulate(){
 	}
 	DISPATCH();
 
+	J_FTOD:{
+		uint8_t regid;
+		f32 f;
+		f64 d;
+		f = u32_rto_f32(gpregs[regid]);
+		d = f;
+		gpregs[regid] = (uint64_t)f64_rto_i64(d);
+		//u64_rto_f64
+		regid = EAT_BYTE();
+	}
+	DISPATCH();
+	J_DTOF:{
+		uint8_t regid;
+		f32 f;
+		f64 d;
+		uint32_t temp; //this is needed to prevent a sign extension.
+		d = u64_rto_f64(gpregs[regid]); //convert th
+		f = d;
+		temp = f32_rto_i32(f); //no sign conversion
+		gpregs[regid] = temp; //unsigned to unsigned- no sign conversion.
+		regid = EAT_BYTE();
+	}
+	DISPATCH();
 
 	
 	J_NOP:DISPATCH();

@@ -1,6 +1,6 @@
 
 
-static const char* insn_names[96] = {
+static const char* insn_names[98] = {
 	"hlt",
 	"nop",
 	"become_user",
@@ -112,14 +112,17 @@ static const char* insn_names[96] = {
 	"jgt",
 	"ze8",
 	"ze16",
-	"ze32"
+	"ze32",
+	//float-to-float conversion
+	"ftod",
+	"dtof"
 	//dummy
 	//,""
 };
 
 
 //how many bytes of arguments does the instruction take?
-static const unsigned insn_nargs[96] = {
+static const unsigned insn_nargs[98] = {
 	//halt and nop,
 	0,
 	0,
@@ -203,12 +206,15 @@ static const unsigned insn_nargs[96] = {
 	//zero extend 8,16,32
 	1,
 	1,
+	1,
+	//ftod, dtof
+	1,
 	1
 	//dummy
 	//,0
 };
 
-static const char* insn_repl[96] = {
+static const char* insn_repl[98] = {
 	"bytes0;",
 	"bytes1;",
 	//become user has arguments
@@ -341,7 +347,10 @@ static const char* insn_repl[96] = {
 	/*ze8,ze16,ze32*/
 	"bytes93,",
 	"bytes94,",
-	"bytes95,"
+	"bytes95,",
+	/*float-to-float*/
+	"bytes96,",
+	"bytes97,"
 	//,""
 };
-static const unsigned n_insns = 96;
+static const unsigned n_insns = 98;
