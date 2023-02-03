@@ -7,14 +7,18 @@
 #define SCREEN_HEIGHT 720
 #define AV_STDIN_BUF_SZ 0x10000
 
-#define AUDIO_MEM_SZ 0x100000
+#define AUDIO_MEM_SZ 0x1000000
+#define SFBUF_SZ 0x1000000
+#define NSOUNDEFFECTS 16
 #define VIDEO_MEM_SZ (SCREEN_WIDTH * SCREEN_HEIGHT * 2)
 
 static uint8_t audiomemory[AUDIO_MEM_SZ] = {0};
+static uint8_t sfbuf[NSOUNDEFFECTS][SFBUF_SZ] = {0};
 static uint32_t vmem[VIDEO_MEM_SZ] = {0}; /*two screens worth of video memory.*/
 static uint32_t* screenmem;
 
 static int32_t audio_left = 0;
+static int32_t sfbuf_left[NSOUNDEFFECTS] = 0;
 
 static SDL_Window *sdl_win = NULL;
 static SDL_Renderer *sdl_rend = NULL;
@@ -138,17 +142,39 @@ static void renderscreen(){
 }
 
 
-static void sdl_audio_callback(void *udata, Uint8 *stream, int len){
+static void sdl_audio_callback(void *udata, Uint8 *stream, int len_in){
 	(void)udata;
+	unsigned long i;
+	int len = len_in;
+	int left;
 	SDL_memset(stream, 0, len);
-	if(audio_left == 0){return;}
 	if(len >= audio_left){
 		len = audio_left;
 	}
 	/*len = (len < audio_left) ? len : audio_left;*/
-	
-	SDL_MixAudio(stream, audiomemory + (AUDIO_MEM_SZ - audio_left), len, SDL_MIX_MAXVOLUME);
-	audio_left -= len;
+	if(audio_left != 0){
+		SDL_MixAudio(stream, audiomemory + (AUDIO_MEM_SZ - audio_left), 
+							len, 
+							SDL_MIX_MAXVOLUME
+					);
+		audio_left -= len;
+	}
+	/*For each of the SFbufs...*/
+	for(i = 0; i < NSOUNDEFFECTS;i++){
+		left = sfbuf_left[i];
+		if(left == 0) continue;
+		len = len_in;
+		if(len >= left)
+			len = left;
+
+		if(left != 0){
+			SDL_MixAudio(stream, sfbuf[i] + (AUDIO_MEM_SZ - left), 
+							len, 
+							SDL_MIX_MAXVOLUME
+					);
+			sfbuf_left[i] -= left;
+		}
+	}
 }
 
 
