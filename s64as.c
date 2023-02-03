@@ -1464,7 +1464,9 @@ static unsigned long handle_dollar_normal(char* loc_in, char recursed){
 		}
 		if(scopevars[i].is_stack_allocated){
 			puts(syntax_fail_pref);
-			puts("Stack allocated variable does not have a register ID for the value. The register ID is for its pointer!");
+			puts("Stack allocated variable:");
+			puts(loc_name);
+			puts("does not have a register ID for the value. The register ID is for its pointer!");
 			puts("Line:");
 			puts(line_copy);
 			exit(1);
