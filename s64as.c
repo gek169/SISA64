@@ -761,7 +761,7 @@ void parse_vardecl(char* where, char** out){
 		strcat(buf3, "getstp $&");
 		strcat(buf3, setme->name);
 		strcat(buf3, ";");
-		strcat(buf3, "getstp $+1!;iadd $+0!, $+1!;setstp $+0!;");
+		strcat(buf3, "getstp $+1!;iadd $+0!,$+1!;setstp $+0!;");
 		setme->is_stack_allocated = 1;
 	}
 	where[len] = saved_character;
@@ -1035,12 +1035,12 @@ static void handle_dollar_close_ccb(){
 			break;
 		}
 		/*When no stack is being used... we don't need to generate any code!*/
-		if(stack_usage == 0) return;
 		/*reduce scope_nvars to match the new scope depth.*/
 		while(
 			scope_nvars && 
 			(scopevars[scope_nvars-1].depth > scope_depth)
 		)scope_nvars--;
+		if(stack_usage == 0) return;
 		/*Allocate registers.*/
 		stackmanip1 = scope_nvars;
 		stackmanip2 = stackmanip1+1;
