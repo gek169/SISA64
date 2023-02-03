@@ -723,16 +723,16 @@ void parse_vardecl(char* where, char** out){
 	/*write the variables name and type to scopevars.*/
 	saved_character = where[len];
 		where[len] = '\0';
-		if(streq("return",where)){
+		if(
+			streq("return",where)
+			||streq("var",where)
+			||streq("gvar",where)
+			||streq("pushall",where)
+			||streq("popall",where)
+		){
 			puts(syntax_fail_pref);
-			puts("You may not name a variable 'return'.");
-			puts("Line:");
-			puts(line_copy);
-			exit(1);
-		}
-		if(streq("var",where)){
-			puts(syntax_fail_pref);
-			puts("You may not name a variable 'var'.");
+			puts("This local variable name is reserved:");
+			puts(where);
 			puts("Line:");
 			puts(line_copy);
 			exit(1);
@@ -1281,6 +1281,72 @@ static unsigned long handle_dollar_normal(char* loc_in, char recursed){
 				strcat(buf2, ";ret");
 				return len + loc_eparen; /*We want to leave the semicolon.*/
 		}
+
+		if(strprefix("pushall",loc_name))
+		if(!(isalnum(loc_name[7]) || loc_name[7] == '_') ){
+			len = 1;
+			loc_name += 7; /*we have to eat the name.*/
+			len += 7;
+			loc_eparen = strfind(loc_name, ";");
+			if(loc_eparen == -1){ /*This is probably redundant.*/
+				puts(syntax_fail_pref);
+				puts("$pushall without semicolon...");
+				puts("Line:");
+				puts(line_copy);
+				exit(1);
+			}
+			while(isspace(*loc_name)){loc_name++;len++;}
+			val = 0;
+			if(loc_name[0] != ';')
+				val = matou(loc_name);
+			if(val + scope_nvars > 256){
+				puts(syntax_fail_pref);
+				puts("Cannot $pushall more than 256 registers!");
+				puts("Line:");
+				puts(line_copy);
+				exit(1);
+			}
+			buf3[0] = 0;
+			for(i = 0; i < scope_nvars + val;i++){
+				strcat(buf2, "push64 ");
+				mutoa(buf2 + strlen(buf2), i);
+				strcat(buf2, ";");
+			}
+			return len + loc_eparen;
+		}
+		if(strprefix("popall",loc_name))
+		if(!(isalnum(loc_name[7]) || loc_name[7] == '_') ){
+			len = 1;
+			loc_name += 6; /*we have to eat the name.*/
+			len += 6;
+			loc_eparen = strfind(loc_name, ";");
+			if(loc_eparen == -1){ /*This is probably redundant.*/
+				puts(syntax_fail_pref);
+				puts("$popall without semicolon...");
+				puts("Line:");
+				puts(line_copy);
+				exit(1);
+			}
+			while(isspace(*loc_name)){loc_name++;len++;}
+			val = 0;
+			if(loc_name[0] != ';')
+				val = matou(loc_name);
+			if(val + scope_nvars > 256){
+				puts(syntax_fail_pref);
+				puts("Cannot $popall more than 256 registers!");
+				puts("Line:");
+				puts(line_copy);
+				exit(1);
+			}
+			buf3[0] = 0;
+			for(i = scope_nvars + val - 1;;i--){
+				strcat(buf2, "pop64 ");
+				mutoa(buf2 + strlen(buf2), i);
+				strcat(buf2, ";");
+				if(i == 0) break;
+			}
+			return len + loc_eparen;
+		}
 		if(strprefix("var",loc_name))
 		if(!(isalnum(loc_name[3]) ||	 loc_name[3] == '_') ){
 				len = 1;
@@ -1361,6 +1427,8 @@ static unsigned long handle_dollar_normal(char* loc_in, char recursed){
 				return len + loc_eparen;
 		}
 	} /*recursed guard.*/
+
+	
 	if( (isalnum(loc_name[0])) || loc_name[0] == '_')
 	{
 		len = 0;

@@ -60,19 +60,9 @@ $|
 			inc $a;
 			st16 $a, &%myVariable%;
 			//do a function call!
-			push64 $a;
-			push64 $zero;
-			push64 $char_mod;
-			push64 $char_zero;
-			push64 $char_newline;
-			push64 $beyond_max_iter;
+			$pushall; asm_print;
 			call &%do_nothing_inefficiently%;
-			pop64 $beyond_max_iter;
-			pop64 $char_newline;
-			pop64 $char_zero;
-			pop64 $char_mod;
-			pop64 $zero;
-			pop64 $a;
+			$popall; asm_print;
 		}
 $|
 
