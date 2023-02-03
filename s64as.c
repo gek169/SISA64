@@ -569,7 +569,8 @@ type parse_type(char* where, char** out){
 	}
 
 	puts(syntax_fail_pref);
-	puts("Could not identify base type while parsing type.");
+	puts("Could not identify base type while parsing type, here:");
+	puts(where);
 	puts("Line:");
 	puts(line_copy);
 	exit(1);
