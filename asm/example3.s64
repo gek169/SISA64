@@ -17,7 +17,7 @@ $|
 		im8 $b, '1';
 		ucmp $c, $a, $b;
 		not $c;
-	}{$a}{
+	}{$c}{
 		:looptop:
 			im8 $b, '0';
 			im8 $a,  0;
