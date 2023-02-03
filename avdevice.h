@@ -13,7 +13,7 @@
 #define VIDEO_MEM_SZ (SCREEN_WIDTH * SCREEN_HEIGHT * 2)
 
 static uint8_t audiomemory[AUDIO_MEM_SZ] = {0};
-static uint8_t sfbuf[NSOUNDEFFECTS][SFBUF_SZ] = {0};
+static uint8_t sfbuf[NSOUNDEFFECTS*SFBUF_SZ] = {0};
 static uint32_t vmem[VIDEO_MEM_SZ] = {0}; /*two screens worth of video memory.*/
 static uint32_t* screenmem;
 
@@ -74,6 +74,24 @@ static void pollevents(){
 	}
 }
 
+
+static void sfbuf_write(uint64_t addr, uint8_t val){
+	sfbuf[addr] = val;
+}
+static uint8_t sfbuf_read(uint64_t addr){
+	return sfbuf[addr];
+}
+
+static void playsf(uint8_t id, uint64_t len){
+	id %= NSOUNDEFFECTS;
+	sfbuf_left[id] = len;
+	if(len > SFBUF_SZ)
+		sfbuf_left[id] = SFBUF_SZ-1;
+}
+static void haltsf(uint8_t id){
+	id %= NSOUNDEFFECTS;
+	sfbuf_left[id] = 0;	
+}
 
 
 static void audio_mem_write(uint64_t addr, uint8_t val){
@@ -168,7 +186,7 @@ static void sdl_audio_callback(void *udata, Uint8 *stream, int len_in){
 			len = left;
 
 		if(left != 0){
-			SDL_MixAudio(stream, sfbuf[i] + (AUDIO_MEM_SZ - left), 
+			SDL_MixAudio(stream, sfbuf+i*SFBUF_SZ + (AUDIO_MEM_SZ - left), 
 							len, 
 							SDL_MIX_MAXVOLUME
 					);
@@ -248,7 +266,7 @@ static uint8_t pv(){ /*Poll events.*/
 #define BEGIN_CONTROLLER 	0x200000000
 #define BEGIN_VMEM 			0x300000000
 #define BEGIN_AMEM 			0x400000000
-
+#define BEGIN_SFBUFS		0x500000000
 
 static uint64_t av_device_read(uint64_t addr){
 	const uint64_t loc_vstring = 0x400;
@@ -274,10 +292,11 @@ static uint64_t av_device_read(uint64_t addr){
 	if(addr == (BEGIN_CONTROLLER + 0x101)) return read_gamer_buttons();
 	/*102 is the stdin buf. 103 is to clear/flush the stdin buf.*/
 	if(addr == (BEGIN_CONTROLLER + 0x102)) return av_stdin_buf_pop_char();
+	if(addr == (BEGIN_CONTROLLER + 0x200)) return NSOUNDEFFECTS;
+	if(addr == (BEGIN_CONTROLLER + 0x201)) return SFBUF_SZ;
 	/*Read video memory.*/
 	if(addr >= BEGIN_VMEM && addr < (BEGIN_VMEM + VIDEO_MEM_SZ))
 		return vmem_read(addr - BEGIN_VMEM);
-
 	return 0;
 }
 
@@ -364,6 +383,14 @@ static void av_device_write(uint64_t addr, uint64_t val){
 		av_stdin_buf_len = 0;
 		return;
 	}
+	if(addr == (BEGIN_CONTROLLER + 0x200)){
+		playsf(val >> 32, val & 0xFFffFFff);
+		return;
+	}
+	if(addr == (BEGIN_CONTROLLER + 0x201)){
+		haltsf(val);
+		return;
+	}
 	/*Memory read and write.*/
 	if(addr >= BEGIN_VMEM && addr < (BEGIN_VMEM + VIDEO_MEM_SZ)){
 		/*video memory is addressed by the u32*/
@@ -372,6 +399,10 @@ static void av_device_write(uint64_t addr, uint64_t val){
 	}
 	if(addr >= BEGIN_AMEM && addr < (BEGIN_AMEM + AUDIO_MEM_SZ)){
 		audio_mem_write(addr - BEGIN_AMEM, val);
+		return;
+	}
+	if(addr >= BEGIN_SFBUFS && addr < (BEGIN_SFBUFS + NSOUNDEFFECTS*SFBUF_SZ)){
+		sfbuf_write(addr - BEGIN_SFBUFS, val);
 		return;
 	}
 }
