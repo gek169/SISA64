@@ -1,6 +1,11 @@
 
 //this is meant to be compiled from the top level of the project...
 ..include"asm/structure.h64"
+..include"asm/structure.h64"
+..include"asm/structure.h64"
+..include"asm/structure.h64"
+..include"asm/structure.h64"
+..include"asm/structure.h64"
 //this is how you do an include if you're compiling in the same directory as asm.
 //..include"structure.h64"
 
@@ -87,4 +92,4 @@ $}
 
 ..asciz:Hello World!
 
-
+..include"asm/strlen.h64"

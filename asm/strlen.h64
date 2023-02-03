@@ -3,10 +3,11 @@
 ASM_GUARD STRLEN_H64
 
 libc_strlen:
-${(char* string) -> u64:	\//char*
-		u64 len; 			\//length of string.
-		char c; 			\//character fetched from string.
-		char zero;			\//dedicated register to hold zero.
+${(char* string) -> u64:
+
+$var u64 len;
+$var char c;
+$var char zero;
 
 	im8 $len, 0;
 	im8 $zero, 0;

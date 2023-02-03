@@ -1,4 +1,5 @@
 
+ASM_GUARD __STRUCTURE_H64
 //usage: [IF]{ASM_GEN_NAME}{expr}{regid}{code}
 .__IF:asm_arg1;jiz asm_arg2,q%asm_arg0_ifend%;asm_arg3;asm_label\asm_arg0_ifend;
 .__IFNOT:asm_arg1;jnz asm_arg2,q%asm_arg0_ifend%;asm_arg3;asm_label\asm_arg0_ifend;
