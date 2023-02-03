@@ -60,9 +60,9 @@ $|
 			inc $a;
 			st16 $a, &%myVariable%;
 			//do a function call!
-			$pushall; asm_print;
+			$pushall;
 			call &%do_nothing_inefficiently%;
-			$popall; asm_print;
+			$popall;
 		}
 $|
 
