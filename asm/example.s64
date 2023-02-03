@@ -16,7 +16,6 @@ setstp 0
 nop
 
 //increment
-
 ${(): 
 	$var u64 a;
 	$var u64 zero;
