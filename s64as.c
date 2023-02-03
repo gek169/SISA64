@@ -1512,7 +1512,9 @@ static unsigned long handle_dollar_normal(char* loc_in, char recursed){
 			if(!scopevars[i].is_stack_allocated){
 				puts(syntax_fail_pref);
 				puts("Most variables do not have a location on the stack.");
-				puts("The one you are using here doesn't either, so you cannot take the address of it,");
+				puts("The one you are using here:");
+				puts(loc_name);
+				puts("doesn't either, so you cannot take the address of it,");
 				puts("Because it does not have one.");
 				puts("Line:");
 				puts(line_copy);
