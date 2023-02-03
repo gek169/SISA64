@@ -987,12 +987,14 @@ void sisa64_emulate(){
 
 	J_ITOF:;{
 		uint8_t regid;
+		uint32_t temp;
 		regid = EAT_BYTE();
 		
-		gpregs[regid] = (int64_t)f32_rto_i32( /*type pun the float to an i32, and sign extend*/
+		temp = f32_rto_i32( /*pun the float to an integer*/
 			(float)  /*do the actual conversion from integer to float*/
 			((int32_t)gpregs[regid]) /*make an i32 */
 		);
+		gpregs[regid] = temp; /*no sign extension occurs.*/
 	}
 	DISPATCH();
 
